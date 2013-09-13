@@ -54,7 +54,7 @@ EOF
 # Get RcbOps Cookbooks.
 mkdir -p /opt/allinoneinone
 git clone -b grizzly git://github.com/rcbops/chef-cookbooks.git /opt/allinoneinone/chef-cookbooks
-cd /opt/allinoneinone/chef-cookbooks
+pushd /opt/allinoneinone/chef-cookbooks
 git submodule init
 git checkout v4.1.0
 git submodule update
@@ -63,12 +63,6 @@ knife cookbook site download -f /tmp/chef-client.tar.gz chef-client 3.0.6 && tar
 
 knife cookbook upload -o /opt/allinoneinone/chef-cookbooks/cookbooks -a
 knife role from file /opt/allinoneinone/chef-cookbooks/roles/*.rb
-
-sed -i 's/\["tunable"\]\["repl_pass"\]/["server_repl_password"]/g' /opt/allinoneinone/chef-cookbooks/cookbooks/mysql-openstack/recipes/server.rb
-knife cookbook upload -o /opt/allinoneinone/chef-cookbooks/cookbooks -a
-
-knife exec -E 'search(:node, "role:*controller*") { |n| m=n.normal["mysql"]; if m["tunable"].has_key? "repl_pass" ; m["server_repl_password"] = m["tunable"].delete("repl_pass"); n.save ; end }'
-knife exec -E 'search(:node, "role:*controller*") { |n| m=n.normal["mysql"]; if m["tunable"]["server_id"].nil? m["tunable"]["server_id"] = m["myid"]; n.save ; end }'
 
 # Set rcbops Chef Environment.
 curl --silent https://raw.github.com/rsoprivatecloud/openstack-chef-deploy/master/environments/grizzly.json > allinoneinone.json.original
@@ -107,7 +101,7 @@ override = env['override_attributes']
 users = override['keystone']['users']
 users['admin']['password'] = 'secrete'
 override['glance']['image_upload'] = True
-override['nova']['virt_type'] = "qemu"
+override['nova'].update({'libvirt': {'virt_type': "qemu"}})
 override['developer_mode'] = True
 override['osops_networks']['management'] = network
 override['osops_networks']['public'] = network
@@ -125,6 +119,9 @@ EOF
 
 # Upload Environment
 knife environment from file allinoneinone.json
+
+# Exit Work Dir
+popd
 
 # Export Chef URL
 export CHEF_SERVER_URL=https://$(ohai ipaddress | awk '/^ / {gsub(/ *\"/, ""); print; exit}'):4000
