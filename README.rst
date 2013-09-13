@@ -19,21 +19,20 @@ As noted the script is simple and makes some assumptions for you.
 
 This script will install the following:
 
-1. Openstack Controller
-2. Openstack Compute
-3. Horizon
-4. Cinder
-5. Cinder is built on a loop file
-*. Nova-Network
-*. ubuntu 12.04 LTS Image
-*. cirros Image
-*. Developer Mode is enabled
-*. Quantum is NOT being used
-*. Qemu is used for the Virt Driver
-*. The Latest Stable Chef Server
-*. Chef Client
-*. Knife
-
+* Openstack Controller
+* Openstack Compute
+* Horizon
+* Cinder
+* Cinder is built on a loop file
+* Nova-Network
+* ubuntu 12.04 LTS Image
+* cirros Image
+* Developer Mode is enabled
+* Quantum is NOT being used
+* Qemu is used for the Virt Driver
+* The Latest Stable Chef Server
+* Chef Client
+* Knife
 
 I made this script such that you can stand up an Openstack environment in minutes and play with it.
 
