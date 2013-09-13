@@ -71,7 +71,7 @@ knife exec -E 'search(:node, "role:*controller*") { |n| m=n.normal["mysql"]; if 
 knife exec -E 'search(:node, "role:*controller*") { |n| m=n.normal["mysql"]; if m["tunable"]["server_id"].nil? m["tunable"]["server_id"] = m["myid"]; n.save ; end }'
 
 # Set rcbops Chef Environment.
-curl --silent https://raw.github.com/rsoprivatecloud/openstack-chef-deploy/master/environments/grizzly-neutron.json > allinoneinone.json.original
+curl --silent https://raw.github.com/rsoprivatecloud/openstack-chef-deploy/master/environments/grizzly.json > allinoneinone.json.original
 
 # Set the Default Chef Environment
 $(which python) << EOF
@@ -96,7 +96,6 @@ def get_network(interface):
     else:
         return '127.0.0.0/8'
 
-pub_network = get_network(interface='eth0')
 network = get_network(interface='eth2')
 
 with open('allinoneinone.json.original', 'rb') as rcbops:
@@ -111,7 +110,7 @@ override['glance']['image_upload'] = True
 override['nova']['virt_type'] = "qemu"
 override['developer_mode'] = True
 override['osops_networks']['management'] = network
-override['osops_networks']['public'] = pub_network
+override['osops_networks']['public'] = network
 override['osops_networks']['nova'] = network
 override['mysql']['root_network_acl'] = "%"
 
