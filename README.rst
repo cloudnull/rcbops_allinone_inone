@@ -17,11 +17,22 @@ This script is presently using the v4.1.0 TAG from the rcbops-cookbooks repo : (
 As noted the script is simple and makes some assumptions for you. 
 
 
-Chiefly: 
-  * Developer Mode is enabled
-  * Quantum is being used
-  * Images Cirros / Ubuntu 12.04 are installed
-  * Qemu is used for Virt Driver.
+This script will install the following:
+
+1. Openstack Controller
+2. Openstack Compute
+3. Horizon
+4. Cinder
+5. Cinder is built on a loop file
+* Nova-Network
+* ubuntu 12.04 LTS Image
+* cirros Image
+* Developer Mode is enabled
+* Quantum is NOT being used
+* Qemu is used for the Virt Driver
+* The Latest Stable Chef Server
+* Chef Client
+* Knife
 
 
 I made this script such that you can stand up an Openstack environment in minutes and play with it.
