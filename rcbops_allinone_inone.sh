@@ -1,3 +1,18 @@
+# Copyright [2013] [Kevin Carter]
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 # Make the system key used for bootstrapping self
 yes '' | ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
 pushd /root/.ssh/
@@ -6,14 +21,14 @@ popd
 
 # Upgrade packages and repo list.
 apt-get update && apt-get -y upgrade
-apt-get install -y rabbitmq-server git curl
+apt-get install -y rabbitmq-server git curl lvm2
 
 # Set Rabbit Pass
 export CHEF_RMQ_PW=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 24)
 
 # Configure Rabbit
 rabbitmqctl add_vhost /chef
-rabbitmqctl add_user chef $CHEF_RMQ_PW
+rabbitmqctl add_user chef ${CHEF_RMQ_PW}
 rabbitmqctl set_permissions -p /chef chef '.*' '.*' '.*'
 
 # Download/Install Chef
@@ -27,7 +42,7 @@ nginx["ssl_port"] = 4000
 nginx["non_ssl_port"] = 4080
 nginx["enable_non_ssl"] = true
 rabbitmq["enable"] = false
-rabbitmq["password"] = "$CHEF_RMQ_PW"
+rabbitmq["password"] = "${CHEF_RMQ_PW}"
 bookshelf['url'] = "https://#{node['ipaddress']}:4000"
 EOF
 
@@ -126,5 +141,18 @@ popd
 # Export Chef URL
 export CHEF_SERVER_URL=https://$(ohai ipaddress | awk '/^ / {gsub(/ *\"/, ""); print; exit}'):4000
 
+# Set Cinder Data
+export CINDER="/opt/cinder.img"
+export LOOP=$(losetup -f)
+
+# Make Cinder Device
+dd if=/dev/zero of=${CINDER} bs=1 count=0 seek=50G
+losetup ${LOOP} ${CINDER}
+pvcreate ${LOOP}
+vgcreate cinder-volumes ${LOOP}
+
+# Set Cinder Device as Persistent
+echo -e 'LOOP=$(losetup -f)\nCINDER="/opt/cinder.img"\nlosetup ${LOOP} ${CINDER}' | tee /etc/rc.local
+
 # Begin Cooking
-knife bootstrap localhost -E allinoneinone -r 'role[allinone]'
+knife bootstrap localhost -E allinoneinone -r 'role[allinone],role[cinder-all]'
