@@ -29,3 +29,9 @@ I made this script such that you can stand up an Openstack environment in minute
 
 I WOULD NOT RECOMMEND USING THIS IN PRODUCTION!
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Here is how you can use this right now. 
+
+1. Login to server as root
+2. execute ``https://raw.github.com/cloudnull/rcbops_allinone_inone/master/rcbops_allinone_inone.sh | bash``
