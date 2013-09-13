@@ -1,11 +1,11 @@
-RCBOPS All In One In One
+Run Openstack all In One
 ########################
 :date: 2013-09-05 09:51
 :tags: rackspace, openstack, 
 :category: \*nix
 
-Run an RCBOPS All In One Deployment In One
-==========================================
+Run an RCBOPS All In One Deployment In One Server
+=================================================
 
 General Overview
 ----------------
@@ -24,15 +24,15 @@ This script will install the following:
 3. Horizon
 4. Cinder
 5. Cinder is built on a loop file
-* Nova-Network
-* ubuntu 12.04 LTS Image
-* cirros Image
-* Developer Mode is enabled
-* Quantum is NOT being used
-* Qemu is used for the Virt Driver
-* The Latest Stable Chef Server
-* Chef Client
-* Knife
+*. Nova-Network
+*. ubuntu 12.04 LTS Image
+*. cirros Image
+*. Developer Mode is enabled
+*. Quantum is NOT being used
+*. Qemu is used for the Virt Driver
+*. The Latest Stable Chef Server
+*. Chef Client
+*. Knife
 
 
 I made this script such that you can stand up an Openstack environment in minutes and play with it.
