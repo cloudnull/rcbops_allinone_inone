@@ -12,6 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# This script will install several bits 
+# =====================================
+# Openstack Controller
+# Openstack Compute
+# Horizon
+# Cinder
+# Cinder is built on a loop file
+# Nova-Network
+# ubuntu 12.04 LTS Image
+# cirros Image
+# Developer Mode is enabled
+# Quantum is NOT being used
+# Qemu is used for the Virt Driver
+# The Latest Stable Chef Server
+# Chef Client
+# Knife
+
 
 # Make the system key used for bootstrapping self
 yes '' | ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
