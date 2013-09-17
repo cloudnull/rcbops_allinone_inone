@@ -1,18 +1,18 @@
 # Copyright [2013] [Kevin Carter]
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script will install several bits 
+# This script will install several bits
 # =====================================
 # Openstack Controller
 # Openstack Compute
@@ -47,6 +47,9 @@ export CHEF_RMQ_PW=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 24)
 rabbitmqctl add_vhost /chef
 rabbitmqctl add_user chef ${CHEF_RMQ_PW}
 rabbitmqctl set_permissions -p /chef chef '.*' '.*' '.*'
+
+# Grab existing Chef Cookie
+export CHEF_COOKIE=$(cat /var/lib/rabbitmq/.erlang.cookie)
 
 # Download/Install Chef
 wget -O /tmp/chef_server.deb 'https://www.opscode.com/chef/download-server?p=ubuntu&pv=12.04&m=x86_64'
@@ -88,7 +91,7 @@ mkdir -p /opt/allinoneinone
 git clone -b grizzly git://github.com/rcbops/chef-cookbooks.git /opt/allinoneinone/chef-cookbooks
 pushd /opt/allinoneinone/chef-cookbooks
 git submodule init
-git checkout v4.1.0
+git checkout v4.1.2
 git submodule update
 knife cookbook site download -f /tmp/cron.tar.gz cron 1.2.6 && tar xf /tmp/cron.tar.gz -C /opt/allinoneinone/chef-cookbooks/cookbooks
 knife cookbook site download -f /tmp/chef-client.tar.gz chef-client 3.0.6 && tar xf /tmp/chef-client.tar.gz -C /opt/allinoneinone/chef-cookbooks/cookbooks
@@ -139,6 +142,8 @@ override['osops_networks']['management'] = network
 override['osops_networks']['public'] = network
 override['osops_networks']['nova'] = network
 override['mysql']['root_network_acl'] = "%"
+rabbit = override['rabbitmq'] = {}
+rabbit['erlang_cookie'] = "${CHEF_COOKIE}"
 
 override.pop('hardware', None)
 override.pop('enable_monit', None)
