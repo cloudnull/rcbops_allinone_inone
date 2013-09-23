@@ -30,6 +30,9 @@
 # Knife
 
 
+#!/usr/bin/env bash
+set -v
+
 # Make the system key used for bootstrapping self
 yes '' | ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
 pushd /root/.ssh/
@@ -42,6 +45,9 @@ apt-get install -y rabbitmq-server git curl lvm2
 
 # Set Rabbit Pass
 export CHEF_RMQ_PW=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 24)
+
+# Set Admin Pass
+export admin_pass=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 8)
 
 # Configure Rabbit
 rabbitmqctl add_vhost /chef
@@ -63,6 +69,7 @@ nginx["non_ssl_port"] = 4080
 nginx["enable_non_ssl"] = true
 rabbitmq["enable"] = false
 rabbitmq["password"] = "${CHEF_RMQ_PW}"
+chef_server_webui['web_ui_admin_default_password'] = "${admin_pass}"
 bookshelf['url'] = "https://#{node['ipaddress']}:4000"
 EOF
 
@@ -94,13 +101,11 @@ git submodule init
 git checkout v4.1.2
 git submodule update
 knife cookbook site download -f /tmp/cron.tar.gz cron 1.2.6 && tar xf /tmp/cron.tar.gz -C /opt/allinoneinone/chef-cookbooks/cookbooks
+
 knife cookbook site download -f /tmp/chef-client.tar.gz chef-client 3.0.6 && tar xf /tmp/chef-client.tar.gz -C /opt/allinoneinone/chef-cookbooks/cookbooks
 
 knife cookbook upload -o /opt/allinoneinone/chef-cookbooks/cookbooks -a
 knife role from file /opt/allinoneinone/chef-cookbooks/roles/*.rb
-
-# Set rcbops Chef Environment.
-curl --silent https://raw.github.com/rsoprivatecloud/openstack-chef-deploy/master/environments/grizzly.json > allinoneinone.json.original
 
 # Set the Default Chef Environment
 $(which python) << EOF
@@ -125,29 +130,85 @@ def get_network(interface):
     else:
         return '127.0.0.0/8'
 
-network = get_network(interface='eth2')
+network = get_network(interface='eth0')
 
-with open('allinoneinone.json.original', 'rb') as rcbops:
-    env = json.loads(rcbops.read())
+cirros_img_url = 'https://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-disk.img'
+ubuntu_img_url = 'http://cloud-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64-disk1.img'
+fedora_img_url = 'http://download.fedoraproject.org/pub/fedora/linux/releases/19/Images/x86_64/Fedora-x86_64-19-20130627-sda.qcow2'
 
-env['name'] = 'allinoneinone'
-env['description'] = 'OpenStack Test All-In-One Deployment in One Server'
-override = env['override_attributes']
-users = override['keystone']['users']
-users['admin']['password'] = 'secrete'
-override['glance']['image_upload'] = True
-override['nova'].update({'libvirt': {'virt_type': "qemu"}})
-override['developer_mode'] = True
-override['osops_networks']['management'] = network
-override['osops_networks']['public'] = network
-override['osops_networks']['nova'] = network
-override['mysql']['root_network_acl'] = "%"
-rabbit = override['rabbitmq'] = {}
-rabbit['erlang_cookie'] = "${CHEF_COOKIE}"
-
-override.pop('hardware', None)
-override.pop('enable_monit', None)
-override.pop('monitoring', None)
+env = {'chef_type': 'environment',
+  'cookbook_versions': {},
+  'default_attributes': {},
+  'description': 'OpenStack Test All-In-One Deployment in One Server',
+  'json_class': 'Chef::Environment',
+  'name': 'allinoneinone',
+  'override_attributes': {
+    'rabbitmq': {
+      'erlang_cookie': "${CHEF_COOKIE}"
+    },
+    'developer_mode': True,
+    'enable_monit': True,
+    'glance': {
+        'image': {
+            'cirros': cirros_img_url,
+            'precise': ubuntu_img_url
+            'fedora': fedora_img_url
+        },
+    'image_upload': True,
+    'images': ['cirros', 'precise', 'fedora']},
+    'keystone': {'admin_user': 'admin',
+    'pki': {'enabled': True},
+    'tenants': ['service', 'admin'],
+    'users': {'admin': {'password': "${admin_pass}",
+      'role': {'admin': ['admin']}}}},
+    'monitoring': {'metric_provider': 'collectd',
+    'procmon_provider': 'monit'},
+    'mysql': {'allow_remote_root': True,
+    'root_network_acl': '%',
+    'tunable': {'log_queries_not_using_index': False}},
+    'nova': {
+      'config': {
+        'cpu_allocation_ratio': 2.0,
+        'disk_allocation_ratio': 1.0,
+        'ram_allocation_ratio': 1.0,
+        'resume_guests_state_on_host_boot': False,
+        'use_single_default_gateway': False
+      },
+      'libvirt': {
+        'virt_type': 'qemu',
+        'vncserver_listen': '0.0.0.0'
+      },
+      'network': {
+        'multi_host': True,
+        'public_interface': 'br0'
+      },
+      'networks': {
+        'public': {
+          'bridge': 'br0',
+          'bridge_dev': 'eth0',
+          'dns1': '8.8.8.8',
+          'dns2': '8.8.4.4',
+          'ipv4_cidr': '172.16.0.0/16',
+          'label': 'public',
+          'network_size': '255',
+          'num_networks': '1'
+        }
+      },
+      'scheduler': {
+        'default_filters': [
+          'AvailabilityZoneFilter',
+          'ComputeFilter',
+          'RetryFilter'
+        ]
+      }
+    },
+    'osops_networks': {
+      'management': network,
+      'nova': network,
+      'public': network
+    }
+  }
+}
 
 with open('allinoneinone.json', 'wb') as rcbops:
     rcbops.write(json.dumps(env, indent=2))
@@ -168,7 +229,7 @@ export CINDER="/opt/cinder.img"
 export LOOP=$(losetup -f)
 
 # Make Cinder Device
-dd if=/dev/zero of=${CINDER} bs=1 count=0 seek=50G
+dd if=/dev/zero of=${CINDER} bs=1 count=0 seek=1000G
 losetup ${LOOP} ${CINDER}
 pvcreate ${LOOP}
 vgcreate cinder-volumes ${LOOP}
@@ -178,3 +239,39 @@ echo -e 'LOOP=$(losetup -f)\nCINDER="/opt/cinder.img"\nlosetup ${LOOP} ${CINDER}
 
 # Begin Cooking
 knife bootstrap localhost -E allinoneinone -r 'role[allinone],role[cinder-all]'
+
+# go to root home
+pushd /root
+
+# Source the Creds
+source openrc
+
+# Add a default Key
+nova keypair-add adminKey --pub-key /root/.ssh/id_rsa.pub
+
+# Add a Volume Type
+nova volume-type-create TestVolType
+
+# Add creds to default env
+echo 'source openrc' | tee -a .bashrc
+echo "export EDITOR=vim" | tee -a .bashrc
+
+popd
+
+# Notify the users
+echo -e "
+Installation complete.
+
+Your RabbitMQ Password is    : ${CHEF_RMQ_PW}
+Your OpenStack Password is   : ${admin_pass}
+Admin SSH key has been added : adminKey
+Cinder Image file is located : ${CINDER}
+Admin Cred File is located   : /root/openrc
+
+Chef Server URL is           : ${CHEF_SERVER_URL}
+Chef Server Password is      : ${admin_pass}
+Your Knife Creds are located : /root/.chef
+All raw cookbooks are located: /opt/allinoneinone
+
+
+"
