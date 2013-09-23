@@ -151,7 +151,7 @@ env = {'chef_type': 'environment',
     'glance': {
         'image': {
             'cirros': cirros_img_url,
-            'precise': ubuntu_img_url
+            'precise': ubuntu_img_url,
             'fedora': fedora_img_url
         },
     'image_upload': True,
