@@ -355,7 +355,7 @@ This is an Openstack Deployment based on the Rackspace Private Cloud Software.
 Your RabbitMQ Password is      : ${RMQ_PW}
 Your OpenStack Password is     : ${NOVA_PW}
 Admin SSH key has been set as  : adminKey
-Cinder Image file is located   : ${CINDER}
+Cinder volumes are located     : ${CINDER}
 Openstack Cred File is located : /root/openrc
 Horizon URL is                 : https://${SYS_IP}:443
 
