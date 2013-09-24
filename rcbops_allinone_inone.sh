@@ -41,7 +41,7 @@ set -v
 # Set this to override the RabbitMQ Password, DEFAULT is "Random Things"
 # RMQ_PW=""
 
-# Set this to override the Openstack Admin Password, DEFAULT is "Random Things"
+# Set this to override the Openstack Admin Pass, DEFAULT is "Random Things"
 # NOVA_PW=""
 
 # Set this to override the Cookbook version, DEFAULT is "v4.1.2"
@@ -61,6 +61,13 @@ set -v
 
 # Set this to override the Cinder Device, DEFAULT is "/opt/cinder.img"
 # CINDER=""
+
+# Set this to set the Neutron Interface, Only Set if you want to use Neutron
+# ================== NOTE NEUTRON DOES NOT WORK RIGHT NOW ==================
+# TODO(kevin) This needs more testing and time to bake.
+# NEUTRON_INTERFACE=""
+# NEUTRON_NAME="quantum"
+# ==========================================================================
 
 
 # Begin the Install Process
@@ -246,22 +253,8 @@ env = {'chef_type': 'environment',
         'virt_type': "${VIRT_TYPE:-qemu}",
         'vncserver_listen': '0.0.0.0'
       },
-      'network': {
-        'multi_host': True,
-        'public_interface': 'br0'
-      },
-      'networks': {
-        'public': {
-          'bridge': 'br0',
-          'bridge_dev': 'eth0',
-          'dns1': '8.8.8.8',
-          'dns2': '8.8.4.4',
-          'ipv4_cidr': '172.16.0.0/16',
-          'label': 'public',
-          'network_size': '255',
-          'num_networks': '1'
-        }
-      },
+      'network': {},
+      'networks': {},
       'scheduler': {
         'default_filters': [
           'AvailabilityZoneFilter',
@@ -277,6 +270,54 @@ env = {'chef_type': 'environment',
     }
   }
 }
+
+neutron_interface = "${NEUTRON_INTERFACE}"
+
+if neutron_interface:
+    env['override_attributes']["${NEUTRON_NAME}"] = {
+        "ovs": {
+            "network_type": "gre",
+            "provider_networks": [
+                {
+                    "bridge": "br-%s" % neutron_interface,
+                    "vlans": "1:1000",
+                    "label": "ph-%s" % neutron_interface
+                }
+            ]
+        }
+    }
+    env['override_attributes']['nova']['network'] = {
+        "provider": "${NEUTRON_NAME}"
+    }
+
+
+else:
+    env['override_attributes']['nova']['network'] = {
+        'multi_host': True,
+        'public_interface': 'br0'
+    }
+    env['override_attributes']['nova']['networks'] = {
+        'public': {
+          'bridge': 'br0',
+          'bridge_dev': 'eth0',
+          'dns1': '8.8.8.8',
+          'dns2': '8.8.4.4',
+          'ipv4_cidr': '172.16.0.0/16',
+          'label': 'public',
+          'network_size': '255',
+          'num_networks': '1'
+        },
+        'private': {
+          'bridge': 'br1',
+          'bridge_dev': 'eth1',
+          'dns1': '8.8.8.8',
+          'dns2': '8.8.4.4',
+          'ipv4_cidr': '192.168.0.0/24',
+          'label': 'private',
+          'network_size': '255',
+          'num_networks': '1'
+        }
+    }
 
 with open('allinoneinone.json', 'wb') as rcbops:
     rcbops.write(json.dumps(env, indent=2))
