@@ -168,8 +168,10 @@ def get_network(interface):
                     return net.get('destination', '127.0.0.0/8')
                     break
         else:
+            print('Interface "%s" not found, using "127.0.0.0/8".' % interface)
             return '127.0.0.0/8'
     else:
+        print('Interface "%s" not found, using "127.0.0.0/8".' % interface)
         return '127.0.0.0/8'
 
 management_network = get_network(interface="${MANAGEMENT_INTERFACE:-eth0}")
