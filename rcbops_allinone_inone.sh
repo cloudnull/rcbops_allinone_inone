@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -v
+
 # Copyright [2013] [Kevin Carter]
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,26 +15,57 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 # This script will install several bits
-# =====================================
+# ============================================================================
 # Openstack Controller
 # Openstack Compute
 # Horizon
-# Cinder
-# Cinder is built on a loop file
-# Nova-Network
+# Cinder is built on a loop file unless you specify a device
+# Nova-Network is used
+# Quantum is NOT being used
 # ubuntu 12.04 LTS Image
 # cirros Image
-# Developer Mode is enabled
-# Quantum is NOT being used
-# Qemu is used for the Virt Driver
+# fedora Image
+# Qemu is the default Virt Driver
 # The Latest Stable Chef Server
 # Chef Client
 # Knife
 
 
-#!/usr/bin/env bash
-set -v
+# Here are the script Override Values.
+# ============================================================================
+# Set this to override the chef default password, DEFAULT is "Random Things"
+# CHEF_PW=""
+
+# Set this to override the RabbitMQ Password, DEFAULT is "Random Things"
+# RMQ_PW=""
+
+# Set this to override the Openstack Admin Password, DEFAULT is "Random Things"
+# NOVA_PW=""
+
+# Set this to override the Cookbook version, DEFAULT is "v4.1.2"
+# COOKBOOK_VERSION=""
+
+# Set this to override the Management Interface, DEFAULT is "eth0"
+# MANAGEMENT_INTERFACE=""
+
+# Set this to override the Nova Interface, DEFAULT is "eth0"
+# NOVA_INTERFACE=""
+
+# Set this to override the Public Interface, DEFAULT is "eth0"
+# PUBLIC_INTERFACE=""
+
+# Set this to override the Virt Type, DEFAULT is "qemu"
+# VIRT_TYPE=""
+
+# Set this to override the Cinder Device, DEFAULT is "/opt/cinder.img"
+# CINDER=""
+
+
+# Begin the Install Process
+# ============================================================================
+
 
 # Make the system key used for bootstrapping self
 yes '' | ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
@@ -43,43 +77,46 @@ popd
 apt-get update && apt-get -y upgrade
 apt-get install -y rabbitmq-server git curl lvm2
 
+# Chef Server Password
+CHEF_PW=${CHEF_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
+
 # Set Rabbit Pass
-export CHEF_RMQ_PW=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 24)
+RMQ_PW=${RMQ_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
 
 # Set Admin Pass
-export admin_pass=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 8)
+NOVA_PW=${NOVA_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
 
 # Configure Rabbit
 rabbitmqctl add_vhost /chef
-rabbitmqctl add_user chef ${CHEF_RMQ_PW}
+rabbitmqctl add_user chef ${RMQ_PW}
 rabbitmqctl set_permissions -p /chef chef '.*' '.*' '.*'
 
 # Grab existing Chef Cookie
-export CHEF_COOKIE=$(cat /var/lib/rabbitmq/.erlang.cookie)
+CHEF_COOKIE=$(cat /var/lib/rabbitmq/.erlang.cookie)
 
 # Download/Install Chef
 wget -O /tmp/chef_server.deb 'https://www.opscode.com/chef/download-server?p=ubuntu&pv=12.04&m=x86_64'
 dpkg -i /tmp/chef_server.deb
 
-# Configure Chef Vars.
+# Configure Chef Vars
 mkdir /etc/chef-server
 cat > /etc/chef-server/chef-server.rb <<EOF
 nginx["ssl_port"] = 4000
 nginx["non_ssl_port"] = 4080
 nginx["enable_non_ssl"] = true
 rabbitmq["enable"] = false
-rabbitmq["password"] = "${CHEF_RMQ_PW}"
-chef_server_webui['web_ui_admin_default_password'] = "${admin_pass}"
+rabbitmq["password"] = "${RMQ_PW}"
+chef_server_webui['web_ui_admin_default_password'] = "${CHEF_PW}"
 bookshelf['url'] = "https://#{node['ipaddress']}:4000"
 EOF
 
-# Reconfigure Chef.
+# Reconfigure Chef
 chef-server-ctl reconfigure
 
-# Install Chef Client.
+# Install Chef Client
 bash <(wget -O - http://opscode.com/chef/install.sh)
 
-# Configure Knife.
+# Configure Knife
 mkdir /root/.chef
 cat > /root/.chef/knife.rb <<EOF
 log_level                :info
@@ -93,18 +130,23 @@ cache_options( :path => '/root/.chef/checksums' )
 cookbook_path            [ '/opt/allinoneinone/chef-cookbooks/cookbooks' ]
 EOF
 
-# Get RcbOps Cookbooks.
+# Get RcbOps Cookbooks
 mkdir -p /opt/allinoneinone
 git clone -b grizzly git://github.com/rcbops/chef-cookbooks.git /opt/allinoneinone/chef-cookbooks
 pushd /opt/allinoneinone/chef-cookbooks
 git submodule init
-git checkout v4.1.2
+git checkout ${COOKBOOK_VERSION:-v4.1.2}
 git submodule update
+
+# Get add-on Cookbooks
 knife cookbook site download -f /tmp/cron.tar.gz cron 1.2.6 && tar xf /tmp/cron.tar.gz -C /opt/allinoneinone/chef-cookbooks/cookbooks
 
 knife cookbook site download -f /tmp/chef-client.tar.gz chef-client 3.0.6 && tar xf /tmp/chef-client.tar.gz -C /opt/allinoneinone/chef-cookbooks/cookbooks
 
+# Upload all of the RCBOPS Cookbooks
 knife cookbook upload -o /opt/allinoneinone/chef-cookbooks/cookbooks -a
+
+# Upload all of the RCBOPS Roles
 knife role from file /opt/allinoneinone/chef-cookbooks/roles/*.rb
 
 # Set the Default Chef Environment
@@ -130,7 +172,9 @@ def get_network(interface):
     else:
         return '127.0.0.0/8'
 
-network = get_network(interface='eth0')
+management_network = get_network(interface="${MANAGEMENT_INTERFACE:-eth0}")
+nova_network = get_network(interface="${NOVA_INTERFACE:-eth0}")
+public_network = get_network(interface="${PUBLIC_INTERFACE:-eth0}")
 
 cirros_img_url = 'https://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-disk.img'
 ubuntu_img_url = 'http://cloud-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64-disk1.img'
@@ -146,7 +190,6 @@ env = {'chef_type': 'environment',
     'rabbitmq': {
       'erlang_cookie': "${CHEF_COOKIE}"
     },
-    'developer_mode': True,
     'enable_monit': True,
     'glance': {
         'image': {
@@ -154,18 +197,41 @@ env = {'chef_type': 'environment',
             'precise': ubuntu_img_url,
             'fedora': fedora_img_url
         },
-    'image_upload': True,
-    'images': ['cirros', 'precise', 'fedora']},
-    'keystone': {'admin_user': 'admin',
-    'pki': {'enabled': True},
-    'tenants': ['service', 'admin'],
-    'users': {'admin': {'password': "${admin_pass}",
-      'role': {'admin': ['admin']}}}},
-    'monitoring': {'metric_provider': 'collectd',
-    'procmon_provider': 'monit'},
-    'mysql': {'allow_remote_root': True,
-    'root_network_acl': '%',
-    'tunable': {'log_queries_not_using_index': False}},
+      'image_upload': True,
+      'images': [
+        'cirros',
+        'precise',
+        'fedora'
+      ]
+    },
+    'keystone': {
+      'admin_user': 'admin',
+      'pki': {
+        'enabled': True
+      },
+      'tenants': [
+        'service', 'admin'
+      ],
+      'users': {
+        'admin': {
+          'password': "${NOVA_PW}",
+          'role': {
+            'admin': ['admin']
+          }
+        }
+      }
+    },
+    'monitoring': {
+      'metric_provider': 'collectd',
+      'procmon_provider': 'monit'
+    },
+    'mysql': {
+      'allow_remote_root': True,
+      'root_network_acl': '%',
+      'tunable': {
+        'log_queries_not_using_index': False
+      }
+    },
     'nova': {
       'config': {
         'cpu_allocation_ratio': 2.0,
@@ -175,7 +241,7 @@ env = {'chef_type': 'environment',
         'use_single_default_gateway': False
       },
       'libvirt': {
-        'virt_type': 'qemu',
+        'virt_type': "${VIRT_TYPE:-qemu}",
         'vncserver_listen': '0.0.0.0'
       },
       'network': {
@@ -203,9 +269,9 @@ env = {'chef_type': 'environment',
       }
     },
     'osops_networks': {
-      'management': network,
-      'nova': network,
-      'public': network
+      'management': management_network,
+      'nova': nova_network,
+      'public': public_network
     }
   }
 }
@@ -221,21 +287,30 @@ knife environment from file allinoneinone.json
 # Exit Work Dir
 popd
 
+# Set the systems IP ADDRESS
+SYS_IP=$(ohai ipaddress | awk '/^ / {gsub(/ *\"/, ""); print; exit}')
+
 # Export Chef URL
-export CHEF_SERVER_URL=https://$(ohai ipaddress | awk '/^ / {gsub(/ *\"/, ""); print; exit}'):4000
+export CHEF_SERVER_URL=https://${SYS_IP}:4000
 
 # Set Cinder Data
-export CINDER="/opt/cinder.img"
-export LOOP=$(losetup -f)
+CINDER=${CINDER_DEV:-"/opt/cinder.img"}
 
 # Make Cinder Device
-dd if=/dev/zero of=${CINDER} bs=1 count=0 seek=1000G
-losetup ${LOOP} ${CINDER}
-pvcreate ${LOOP}
-vgcreate cinder-volumes ${LOOP}
+if [ "${CINDER_DEV}" ];then
+    pvcreate ${CINDER}
+    vgcreate cinder-volumes ${CINDER}
+    sed -i "/$(echo ${CINDER} | sed 's/\//\\\//g')/ s/^/#\ /" /etc/fstab
+else
+    LOOP=$(losetup -f)
+    dd if=/dev/zero of=${CINDER} bs=1 count=0 seek=1000G
+    losetup ${LOOP} ${CINDER}
+    pvcreate ${LOOP}
+    vgcreate cinder-volumes ${LOOP}
 
-# Set Cinder Device as Persistent
-echo -e 'LOOP=$(losetup -f)\nCINDER="/opt/cinder.img"\nlosetup ${LOOP} ${CINDER}' | tee /etc/rc.local
+    # Set Cinder Device as Persistent
+    echo -e 'LOOP=$(losetup -f)\nCINDER="/opt/cinder.img"\nlosetup ${LOOP} ${CINDER}' | tee /etc/rc.local
+fi
 
 # Begin Cooking
 knife bootstrap localhost -E allinoneinone -r 'role[allinone],role[cinder-all]'
@@ -253,25 +328,54 @@ nova keypair-add adminKey --pub-key /root/.ssh/id_rsa.pub
 nova volume-type-create TestVolType
 
 # Add creds to default env
-echo 'source openrc' | tee -a .bashrc
+echo "source openrc" | tee -a .bashrc
 echo "export EDITOR=vim" | tee -a .bashrc
 
+# Exit Root Dir
 popd
 
-# Notify the users
+# Remove MOTD files
+rm /etc/motd
+rm /var/run/motd
+
+# Remove PAM motd modules from config
+sed -i '/pam_motd.so/ s/^/#\ /' /etc/pam.d/login
+sed -i '/pam_motd.so/ s/^/#\ /' /etc/pam.d/sshd
+
+# Notify the users and set new the MOTD
 echo -e "
-Installation complete.
 
-Your RabbitMQ Password is    : ${CHEF_RMQ_PW}
-Your OpenStack Password is   : ${admin_pass}
-Admin SSH key has been added : adminKey
-Cinder Image file is located : ${CINDER}
-Admin Cred File is located   : /root/openrc
+** NOTICE **
 
-Chef Server URL is           : ${CHEF_SERVER_URL}
-Chef Server Password is      : ${admin_pass}
-Your Knife Creds are located : /root/.chef
-All raw cookbooks are located: /opt/allinoneinone
+This is an Openstack Deployment based on the Rackspace Private Cloud Software.
+# ============================================================================
 
+Your RabbitMQ Password is      : ${RMQ_PW}
+Your OpenStack Password is     : ${NOVA_PW}
+Admin SSH key has been set as  : adminKey
+Cinder Image file is located   : ${CINDER}
+Openstack Cred File is located : /root/openrc
+Horizon URL is                 : https://${SYS_IP}:443
+
+Chef Server URL is             : ${CHEF_SERVER_URL}
+Chef Server Password is        : ${CHEF_PW}
+Your knife.rb is located       : /root/.chef/knife.rb
+All cookbooks are located      : /opt/allinoneinone
+
+# ============================================================================
+
+" | tee /etc/motd
+
+# Tell users how to get started on the CLI
+echo -e "
+For instant access to Nova please run \"source /root/openrc\" This will load
+Your credentials. Otherwise logout and log back in, your Nova Credentials will
+be auto-loaded when you log back in.
+
+You also have access to \"knife\" which can be used for modification and
+management of your Chef Server.
 
 "
+
+# Exit Zero
+exit 0
