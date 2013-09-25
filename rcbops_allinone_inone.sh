@@ -200,7 +200,7 @@ env = {'chef_type': 'environment',
   'json_class': 'Chef::Environment',
   'name': 'allinoneinone',
   'override_attributes': {
-    'developer_mode': ${DEVELOPER_MODE:-False}
+    'developer_mode': ${DEVELOPER_MODE:-False},
     'rabbitmq': {
       'erlang_cookie': "${CHEF_COOKIE}"
     },
@@ -279,7 +279,7 @@ env = {'chef_type': 'environment',
 neutron_interface = "${NEUTRON_INTERFACE}"
 
 if neutron_interface:
-    env['override_attributes']["${NEUTRON_NAME}"] = {
+    env['override_attributes']["${NEUTRON_NAME}"].update({
         "ovs": {
             "network_type": "gre",
             "provider_networks": [
@@ -290,18 +290,20 @@ if neutron_interface:
                 }
             ]
         }
-    }
-    env['override_attributes']['nova']['network'] = {
+    })
+
+    env['override_attributes']['nova']['network'].update({
         "provider": "${NEUTRON_NAME}"
-    }
+    })
 
 
 else:
-    env['override_attributes']['nova']['network'] = {
+    env['override_attributes']['nova']['network'].update({
         'multi_host': True,
         'public_interface': 'br0'
-    }
-    env['override_attributes']['nova']['networks'] = {
+    })
+
+    env['override_attributes']['nova']['networks'].update({
         'public': {
           'bridge': 'br0',
           'bridge_dev': 'eth0',
@@ -322,7 +324,7 @@ else:
           'network_size': '255',
           'num_networks': '1'
         }
-    }
+    })
 
 with open('allinoneinone.json', 'wb') as rcbops:
     rcbops.write(json.dumps(env, indent=2))
