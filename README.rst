@@ -76,11 +76,12 @@ Set this to override the Cinder Device, DEFAULT is "/opt/cinder.img":
   CINDER=""
 
 
-I WOULD NOT RECOMMEND USING THIS IN PRODUCTION!
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+========
 
 
-Here is how you can use this right now.
+Here is how you can get Started.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 1. Provision Server with a minimum of 2GB of ram and 10GB of hard disk space.
 2. Login to server as root
@@ -91,6 +92,10 @@ Here is how you can use this right now.
 
 
 5. Go to the IP address of your server, login to Horizon, have fun with Openstack.
+
+
+NOTICE: I WOULD NOT RECOMMEND USING THIS IN PRODUCTION!
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
 License:
