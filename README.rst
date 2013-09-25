@@ -7,14 +7,12 @@ Run Openstack all In One
 Run an RCBOPS All In One Deployment In One Server
 =================================================
 
+
 General Overview
-----------------
-
-This is a VERY simple script which will build you an environment based on the Rackspace Private Cloud Software.
-This script is presently using the v4.1.0 TAG from the rcbops-cookbooks repo : (https://github.com/rcbops/chef-cookbooks).
+~~~~~~~~~~~~~~~~
 
 
-As noted the script is simple and makes some assumptions for you.
+I made this script such that you can stand up an Openstack based on Rackspace Private Cloud Software in minutes and play with it. This is a VERY simple script which will build you an environment based on the Rackspace Private Cloud Software. This script is presently using the v4.1.2 TAG by default from the rcbops-cookbooks repo : (https://github.com/rcbops/chef-cookbooks) though an override can be set to use any and all RCBOPS releases.
 
 
 This script will install the following:
@@ -23,14 +21,11 @@ This script will install the following:
 * Openstack Compute
 * Horizon
 * Cinder
-* Cinder is built on a loop file
 * Nova-Network
 * ubuntu 12.04 LTS Image
 * Cirros Image
 * Fedora Image
 * Ubuntu Image
-* Developer Mode is enabled
-* Quantum has not been tested.
 * Qemu is used for the Virt Driver
 * The Latest Stable Chef Server
 * Chef Client
@@ -40,7 +35,9 @@ This script will install the following:
 ========
 
 
-I made this script such that you can stand up an Openstack based on Rackspace Private Cloud Software in minutes and play with it.
+Configuration Options
+~~~~~~~~~~~~~~~~~~~~~
+
 
 The script has a bunch of override variables that can be set in script or as environment variables.
 
