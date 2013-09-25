@@ -34,7 +34,11 @@ set -v
 
 
 # Here are the script Override Values.
+# Any of these override variables can be exported as environment variables.
 # ============================================================================
+# Set this to override the RCBOPS Developer Mode, DEFAULT is False
+# DEVELOPER_MODE=True || False
+
 # Set this to override the chef default password, DEFAULT is "Random Things"
 # CHEF_PW=""
 
@@ -196,6 +200,7 @@ env = {'chef_type': 'environment',
   'json_class': 'Chef::Environment',
   'name': 'allinoneinone',
   'override_attributes': {
+    'developer_mode': ${DEVELOPER_MODE:-False}
     'rabbitmq': {
       'erlang_cookie': "${CHEF_COOKIE}"
     },
