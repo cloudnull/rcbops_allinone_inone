@@ -1,7 +1,7 @@
 Run Openstack all In One
 ########################
 :date: 2013-09-05 09:51
-:tags: rackspace, openstack, 
+:tags: rackspace, openstack,
 :category: \*nix
 
 Run an RCBOPS All In One Deployment In One Server
@@ -14,7 +14,7 @@ This is a VERY simple script which will build you an environment based on the Ra
 This script is presently using the v4.1.0 TAG from the rcbops-cookbooks repo : (https://github.com/rcbops/chef-cookbooks).
 
 
-As noted the script is simple and makes some assumptions for you. 
+As noted the script is simple and makes some assumptions for you.
 
 
 This script will install the following:
@@ -26,27 +26,71 @@ This script will install the following:
 * Cinder is built on a loop file
 * Nova-Network
 * ubuntu 12.04 LTS Image
-* cirros Image
+* Cirros Image
+* Fedora Image
+* Ubuntu Image
 * Developer Mode is enabled
-* Quantum is NOT being used
+* Quantum has not been tested.
 * Qemu is used for the Virt Driver
 * The Latest Stable Chef Server
 * Chef Client
 * Knife
 
-I made this script such that you can stand up an Openstack environment in minutes and play with it.
+
+========
+
+
+I made this script such that you can stand up an Openstack based on Rackspace Private Cloud Software in minutes and play with it.
+
+The script has a bunch of override variables that can be set in script or as environment variables.
+
+
+Set this to override the RCBOPS Developer Mode, DEFAULT is False:
+  DEVELOPER_MODE=True or False
+
+Set this to override the chef default password, DEFAULT is "Random Things":
+  CHEF_PW=""
+
+Set this to override the RabbitMQ Password, DEFAULT is "Random Things":
+  RMQ_PW=""
+
+Set this to override the Openstack Admin Pass, DEFAULT is "Random Things":
+  NOVA_PW=""
+
+Set this to override the Cookbook version, DEFAULT is "v4.1.2":
+  COOKBOOK_VERSION=""
+
+Set this to override the Management Interface, DEFAULT is "eth0":
+  MANAGEMENT_INTERFACE=""
+
+Set this to override the Nova Interface, DEFAULT is "eth0":
+  NOVA_INTERFACE=""
+
+Set this to override the Public Interface, DEFAULT is "eth0":
+  PUBLIC_INTERFACE=""
+
+Set this to override the Virt Type, DEFAULT is "qemu":
+  VIRT_TYPE=""
+
+Set this to override the Cinder Device, DEFAULT is "/opt/cinder.img":
+  CINDER=""
 
 
 I WOULD NOT RECOMMEND USING THIS IN PRODUCTION!
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
-Here is how you can use this right now. 
+Here is how you can use this right now.
 
-1. Login to server as root
-2. execute::
+1. Provision Server with a minimum of 2GB of ram and 10GB of hard disk space.
+2. Login to server as root
+3. Set any of your environment variables that you may want to use while running the script.
+4. execute::
 
     curl https://raw.github.com/cloudnull/rcbops_allinone_inone/master/rcbops_allinone_inone.sh | bash
+
+
+5. Go to the IP address of your server, login to Horizon, have fun with Openstack.
 
 
 License:
