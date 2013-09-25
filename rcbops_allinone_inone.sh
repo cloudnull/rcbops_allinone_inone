@@ -81,7 +81,7 @@ set -v
 # Make the system key used for bootstrapping self
 yes '' | ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
 pushd /root/.ssh/
-cat id_rsa.pub >> authorized_keys
+cat id_rsa.pub | tee -a authorized_keys
 popd
 
 # Upgrade packages and repo list.
