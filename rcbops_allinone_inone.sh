@@ -48,6 +48,9 @@ set -v
 # Set this to override the Openstack Admin Pass, DEFAULT is "Random Things"
 # NOVA_PW=""
 
+# Set this to override the system users Password, DEFAULT is the NOVA_PW
+# SYSTEM_PW=""
+
 # Set this to override the Cookbook version, DEFAULT is "v4.1.2"
 # COOKBOOK_VERSION=""
 
@@ -96,6 +99,9 @@ RMQ_PW=${RMQ_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
 
 # Set Admin Pass
 NOVA_PW=${NOVA_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
+
+# Set the system Pass
+SYSTEM_PW=${SYSTEM_PW:-${NOVA_PW}}
 
 # Configure Rabbit
 rabbitmqctl add_vhost /chef
@@ -392,6 +398,10 @@ rm /var/run/motd
 sed -i '/pam_motd.so/ s/^/#\ /' /etc/pam.d/login
 sed -i '/pam_motd.so/ s/^/#\ /' /etc/pam.d/sshd
 
+# Reset users Password post installation
+IAM=$(whoami)
+echo -e "${SYSTEM_PW}\n${SYSTEM_PW}" | ($(which passwd) ${IAM})
+
 # Notify the users and set new the MOTD
 echo -e "
 
@@ -425,6 +435,17 @@ be auto-loaded when you log back in.
 You also have access to \"knife\" which can be used for modification and
 management of your Chef Server.
 
+
+================== NOTICE ==================
+      Your ROOT password has been reset
+
+Here are the details:
+
+Username : ${IAM}
+Password : ${SYSTEM_PW}
+
+
+** Please make a note of this! **
 "
 
 # Exit Zero
