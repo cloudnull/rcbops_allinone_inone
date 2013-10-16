@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
+# Set Verbose
 set -v
+
+# Set Exit on error
+set -e 
+
+# make sure variables are set
+set -u
 
 # Copyright [2013] [Kevin Carter]
 #
@@ -103,6 +110,9 @@ NOVA_PW=${NOVA_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
 # Set the system Pass
 SYSTEM_PW=${SYSTEM_PW:-${NOVA_PW}}
 
+# Set the Cookbook Version
+COOKBOOK_VERSION=${COOKBOOK_VERSION:-v4.1.2}
+
 # Configure Rabbit
 rabbitmqctl add_vhost /chef
 rabbitmqctl add_user chef ${RMQ_PW}
@@ -149,10 +159,10 @@ EOF
 
 # Get RcbOps Cookbooks
 mkdir -p /opt/allinoneinone
-git clone -b grizzly git://github.com/rcbops/chef-cookbooks.git /opt/allinoneinone/chef-cookbooks
+git clone git://github.com/rcbops/chef-cookbooks.git /opt/allinoneinone/chef-cookbooks
 pushd /opt/allinoneinone/chef-cookbooks
 git submodule init
-git checkout ${COOKBOOK_VERSION:-v4.1.2}
+git checkout ${COOKBOOK_VERSION}
 git submodule update
 
 # Get add-on Cookbooks
@@ -410,6 +420,7 @@ echo -e "
 This is an Openstack Deployment based on the Rackspace Private Cloud Software.
 # ============================================================================
 
+Cookbook Branch/Version is     : ${COOKBOOK_VERSION}
 Your RabbitMQ Password is      : ${RMQ_PW}
 Your OpenStack Password is     : ${NOVA_PW}
 Admin SSH key has been set as  : adminKey
