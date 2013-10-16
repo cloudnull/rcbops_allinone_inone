@@ -12,7 +12,7 @@ General Overview
 ~~~~~~~~~~~~~~~~
 
 
-I made this script such that you can stand up an Openstack based on Rackspace Private Cloud Software in minutes and play with it. This is a VERY simple script which will build you an environment based on the Rackspace Private Cloud Software. This script is presently using the v4.1.2 TAG by default from the rcbops-cookbooks repo : (https://github.com/rcbops/chef-cookbooks) though an override can be set to use any and all RCBOPS releases.
+I made this script such that you can stand up an Openstack based on Rackspace Private Cloud Software in minutes and play with it. This is a VERY simple script which will build you an environment based on the Rackspace Private Cloud Software. This script is presently using the v4.1.2 TAG by default from the rcbops-cookbooks repo : (https://github.com/rcbops/chef-cookbooks) though an override can be set to use any and all RCBOPS releases. This script only works on Ubuntu servers.
 
 
 This script will install the following:
