@@ -89,10 +89,12 @@ set -u
 
 
 # Make the system key used for bootstrapping self
-yes '' | ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
-pushd /root/.ssh/
-cat id_rsa.pub | tee -a authorized_keys
-popd
+if [ ! -f "/root/.ssh/id_rsa" ];then
+    ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
+    pushd /root/.ssh/
+    cat id_rsa.pub | tee -a authorized_keys
+    popd
+fi
 
 # Upgrade packages and repo list.
 apt-get update && apt-get -y upgrade
