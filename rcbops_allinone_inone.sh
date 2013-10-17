@@ -228,6 +228,20 @@ trap "error_exit 'ERROR IN SCRIPT'" ERR
 # Begin the Install Process
 # ============================================================================
 
+# Test Server OS
+
+function ostype() {
+  if [ -e /etc/redhat-release ]; then
+    echo "This script only works with Ubuntu servers."
+    exit 0
+  elif [ "$(lsb_release -d | awk '{print $2}')" == "Ubuntu" ]; then
+    echo "Proceeding with installation..."
+  else
+    echo -e "Could not detect distribution type." && exit 0
+  fi
+}
+
+ostype
 
 # Make the system key used for bootstrapping self
 if [ ! -f "/root/.ssh/id_rsa" ];then
