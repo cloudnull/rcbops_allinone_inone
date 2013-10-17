@@ -3,7 +3,7 @@
 set -v
 
 # Set Exit on error
-set -e 
+set -e
 
 # make sure variables are set
 set -u
@@ -77,12 +77,153 @@ set -u
 # CINDER=""
 
 # Set this to set the Neutron Interface, Only Set if you want to use Neutron
-# ================== NOTE NEUTRON DOES NOT WORK RIGHT NOW ==================
-# TODO(kevin) This needs more testing and time to bake.
+# ================== NOTE NEUTRON MAY NOT WORK RIGHT NOW ===================
+# Enale || Disable Neutron
+# NEUTRON_ENABLED=False
+
+# Set the Interface for Neutron
 # NEUTRON_INTERFACE=""
+
+# Set the name of the Service
 # NEUTRON_NAME="quantum"
 # ==========================================================================
 
+
+# OS Check
+# ==========================================================================
+if [ ! -f "/etc/lsb-release"  ]; then
+    echo "Not able to determine the OS Type."
+    exit 1
+elif [ ! "$(grep -i ubuntu /etc/lsb-release)" ];then
+    echo "This is not Ubuntu, So this script will not work."
+    exit 1
+fi
+
+
+# Error Handler
+# ==========================================================================
+function error_exit() {
+
+  # Remove known Packages
+  for known_package in rabbitmq-server chef-server chef; do
+    if [ "$(dpkg -l | grep ${known_package})" ];then
+      apt-get -y remove ${known_package}
+      apt-get -y purge ${known_package}
+    fi
+  done
+
+  # Search for Openstack Packages
+  for os_package in $(dpkg -l | grep -i openstack | awk '{print $2}'); do
+    apt-get -y remove ${os_package}
+    apt-get -y purge ${os_package}
+  done
+
+  # Remove all packages which are no longer needed
+  apt-get -y autoremove
+
+  echo "Removing Known Files and Folders."
+
+  # Delete Downloaded Chef DEB
+  if [ -f "/tmp/chef_server.deb" ];then
+    rm "/tmp/chef_server.deb"
+  fi
+
+  # remove temp opt chef-server directory
+  if [ -d "/tmp/opt/chef-server" ];then
+    rm -rf /tmp/opt/chef-server
+  fi
+
+  # Remove CINDER Device
+  if [ -f "/opt/cinder.img" ];then
+    rm /opt/cinder.img
+  fi
+
+  # Remove All in one directory
+  if [ -d "/opt/allinoneinone/" ];then
+    rm -rf /opt/allinoneinone/
+  fi
+
+  # Remove opt chef-server directory
+  if [ -d "/opt/chef-server" ];then
+    rm -rf /opt/chef-server
+  fi
+
+  # Remove opt chef directory
+  if [ -d "/opt/chef" ];then
+    rm -rf /opt/chef
+  fi
+
+  # remove Chef Directory
+  if [ -d "/root/.chef" ];then
+    rm -rf /root/.chef
+  fi
+
+  # remove pubic key
+  if [ -f "/root/.ssh/id_rsa.pub" ];then
+    rm /root/.ssh/id_rsa.pub
+  fi
+
+  # remove private key
+  if [ -f "/root/.ssh/id_rsa" ];then
+    rm /root/.ssh/id_rsa
+  fi
+
+  # Remove source file
+  if [ -f "/root/openrc" ];then
+    rm /root/openrc
+  fi
+
+  # remove chef-server etc Directory
+  if [ -d "/etc/chef" ];then
+    rm -rf /etc/chef
+  fi
+
+  # remove chef-server etc Directory
+  if [ -d "/etc/chef-server" ];then
+    rm -rf /etc/chef-server
+  fi
+
+  # remove Chef-server Directory
+  if [ -d "/var/chef" ];then
+    rm -rf /var/chef
+  fi
+
+  # Remove Var chef-server directory
+  if [ -d "/var/opt/chef-server" ];then
+    rm -rf /var/opt/chef-server
+  fi
+
+  # Remove rabbitmq directory
+  if [ -d "/var/lib/rabbitmq/" ];then
+    rm -rf /var/lib/rabbitmq/
+  fi
+
+  # Remove chef-server logs
+  if [ -d "/var/log/chef-server" ];then
+    rm -rf /var/log/chef-server
+  fi
+
+
+  # Stop Service
+  for run in {1..2};do
+    for service in nginx chef-server-webui erchef bookshelf chef-expander chef-solr postgresql; do
+      PID=$(ps auxf | grep ${service} | grep -v grep | awk '{print $2}')
+      if [ "${PID}" ];then
+        kill ${PID}
+      fi
+    done
+  done
+
+  # Print Messages
+  echo "ERROR! $@"
+  exit 1
+}
+
+# Trap all Death Signals and Errors
+trap "error_exit 'Received signal SIGHUP'" SIGHUP
+trap "error_exit 'Received signal SIGINT'" SIGINT
+trap "error_exit 'Received signal SIGTERM'" SIGTERM
+trap "error_exit 'ERROR IN SCRIPT'" ERR
 
 # Begin the Install Process
 # ============================================================================
@@ -115,6 +256,18 @@ SYSTEM_PW=${SYSTEM_PW:-${NOVA_PW}}
 # Set the Cookbook Version
 COOKBOOK_VERSION=${COOKBOOK_VERSION:-v4.1.2}
 
+# Set Cinder Data
+CINDER=${CINDER:-"/opt/cinder.img"}
+
+# Enable || Disable Neutron
+NEUTRON_ENABLED=${NEUTRON_ENABLED:-False}
+
+# Set the Interface
+NEUTRON_INTERFACE=${NEUTRON_INTERFACE:-None}
+
+# Set the Name of the Neutron Service
+NEUTRON_NAME=${NEUTRON_NAME:-"quantum"}
+
 # Configure Rabbit
 rabbitmqctl add_vhost /chef
 rabbitmqctl add_user chef ${RMQ_PW}
@@ -128,7 +281,7 @@ wget -O /tmp/chef_server.deb 'https://www.opscode.com/chef/download-server?p=ubu
 dpkg -i /tmp/chef_server.deb
 
 # Configure Chef Vars
-mkdir /etc/chef-server
+mkdir -p /etc/chef-server
 cat > /etc/chef-server/chef-server.rb <<EOF
 nginx["ssl_port"] = 4000
 nginx["non_ssl_port"] = 4080
@@ -146,7 +299,7 @@ chef-server-ctl reconfigure
 bash <(wget -O - http://opscode.com/chef/install.sh)
 
 # Configure Knife
-mkdir /root/.chef
+mkdir -p /root/.chef
 cat > /root/.chef/knife.rb <<EOF
 log_level                :info
 log_location             STDOUT
@@ -294,9 +447,8 @@ env = {'chef_type': 'environment',
   }
 }
 
-neutron_interface = "${NEUTRON_INTERFACE}"
-
-if neutron_interface:
+if ${NEUTRON_ENABLED} is True:
+    neutron_interface = "${NEUTRON_INTERFACE}"
     env['override_attributes']["${NEUTRON_NAME}"].update({
         "ovs": {
             "network_type": "gre",
@@ -349,6 +501,7 @@ with open('allinoneinone.json', 'wb') as rcbops:
 
 EOF
 
+
 # Upload Environment
 knife environment from file allinoneinone.json
 
@@ -361,11 +514,8 @@ SYS_IP=$(ohai ipaddress | awk '/^ / {gsub(/ *\"/, ""); print; exit}')
 # Export Chef URL
 export CHEF_SERVER_URL=https://${SYS_IP}:4000
 
-# Set Cinder Data
-CINDER=${CINDER_DEV:-"/opt/cinder.img"}
-
 # Make Cinder Device
-if [ "${CINDER_DEV}" ];then
+if [ -b "${CINDER}" ];then
     pvcreate ${CINDER}
     vgcreate cinder-volumes ${CINDER}
     sed -i "/$(echo ${CINDER} | sed 's/\//\\\//g')/ s/^/#\ /" /etc/fstab
