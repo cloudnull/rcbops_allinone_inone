@@ -266,6 +266,9 @@ file_cleanup() {
   # Remove private key
   [ -f "/root/.ssh/id_rsa" ] && rm /root/.ssh/id_rsa
 
+  # Remove MySQL cnf file
+  [ -f "/root/.my.cnf" ] && /root/.my.cnf
+  
   # Remove source file
   [ -f "/root/openrc" ] && rm /root/openrc
 
@@ -278,6 +281,12 @@ file_cleanup() {
   # Remove REMI repo
   [ -f "/etc/yum.repos.d/remi.repo" ] && rm /etc/yum.repos.d/remi.repo
   
+  # Remove MYSQL cnf file
+  [ -f "/etc/my.cnf.rpmsave" ] && /etc/my.cnf.rpmsave
+
+  # Remove MySQL Grants
+  [ -f "/etc/mysql_grants.sql" ] && rm /etc/mysql_grants.sql
+  
   # Remove EPEL RPM
   [ -f "/tmp/epel-release-6-8.noarch.rpm" ] && rm /tmp/epel-release-6-8.noarch.rpm
   
@@ -287,12 +296,9 @@ file_cleanup() {
   # Remove REMI RPM
   [ -f "/tmp/remi-release-6.rpm" ] && rm /tmp/remi-release-6.rpm
 
-  # Remove MySQL Grants
-  [ -f "/etc/mysql_grants.sql" ] && rm /etc/mysql_grants.sql
-  
   # Remove MySQL log file
   [ -f "/var/log/mysqld.log.rpmsave" ] && rm /var/log/mysqld.log.rpmsave
-  
+ 
 }
 
 directory_cleanup() {
