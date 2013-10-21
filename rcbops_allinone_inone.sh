@@ -356,11 +356,74 @@ service_stop() {
 
 }
 
+function success_exit() {
+  set +v
+
+  # Drop Lock File
+  echo "AIOIO INSTALLATION COMPLETED: $(date +%y%m%d%H%M)" | tee /opt/aioio-installed.lock
+
+  # Reset users Password post installation
+  IAM=$(logname)
+  echo -e "${SYSTEM_PW}\n${SYSTEM_PW}" | ($(which passwd) ${IAM})
+
+  # Notify the users and set new the MOTD
+  echo -e "
+
+  ** NOTICE **
+
+  This is an Openstack Deployment based on the Rackspace Private Cloud Software.
+  # ============================================================================
+
+  Cookbook Branch/Version is     : ${COOKBOOK_VERSION}
+  Your RabbitMQ Password is      : ${RMQ_PW}
+  Your OpenStack Password is     : ${NOVA_PW}
+  Admin SSH key has been set as  : adminKey
+  Cinder volumes are located     : ${CINDER}
+  Openstack Cred File is located : /root/openrc
+  Horizon URL is                 : https://${SYS_IP}:443
+
+  Chef Server URL is             : ${CHEF_SERVER_URL}
+  Chef Server Password is        : ${CHEF_PW}
+  Your knife.rb is located       : /root/.chef/knife.rb
+  All cookbooks are located      : /opt/allinoneinone
+
+  # ============================================================================
+
+  " | tee /etc/motd
+
+  # Tell users how to get started on the CLI
+  echo -e "
+  For instant access to Nova please run \"source /root/openrc\" This will load
+  Your credentials. Otherwise logout and log back in, your Nova Credentials will
+  be auto-loaded when you log back in.
+
+  You also have access to \"knife\" which can be used for modification and
+  management of your Chef Server.
+
+
+  ================== NOTICE ==================
+        Your ROOT password has been reset
+
+  Here are the details:
+
+  Username : ${IAM}
+  Password : ${SYSTEM_PW}
+
+
+  ** Please make a note of this! **
+  "
+
+  # Exit Zero
+  exit 0
+
+}
+
 # Trap all Death Signals and Errors
 trap "error_exit 'Received signal SIGHUP'" SIGHUP
 trap "error_exit 'Received signal SIGINT'" SIGINT
 trap "error_exit 'Received signal SIGTERM'" SIGTERM
 trap 'error_exit ${LINENO} ${$?}' ERR
+
 
 # Begin the Install Process
 # ============================================================================
@@ -708,58 +771,4 @@ if [ -f "/etc/pam.d/sshd" ];then
   sed -i '/pam_motd.so/ s/^/#\ /' /etc/pam.d/sshd
 fi
 
-# Reset users Password post installation
-IAM=$(logname)
-echo -e "${SYSTEM_PW}\n${SYSTEM_PW}" | ($(which passwd) ${IAM})
-
-# Notify the users and set new the MOTD
-echo -e "
-
-** NOTICE **
-
-This is an Openstack Deployment based on the Rackspace Private Cloud Software.
-# ============================================================================
-
-Cookbook Branch/Version is     : ${COOKBOOK_VERSION}
-Your RabbitMQ Password is      : ${RMQ_PW}
-Your OpenStack Password is     : ${NOVA_PW}
-Admin SSH key has been set as  : adminKey
-Cinder volumes are located     : ${CINDER}
-Openstack Cred File is located : /root/openrc
-Horizon URL is                 : https://${SYS_IP}:443
-
-Chef Server URL is             : ${CHEF_SERVER_URL}
-Chef Server Password is        : ${CHEF_PW}
-Your knife.rb is located       : /root/.chef/knife.rb
-All cookbooks are located      : /opt/allinoneinone
-
-# ============================================================================
-
-" | tee /etc/motd
-
-# Tell users how to get started on the CLI
-echo -e "
-For instant access to Nova please run \"source /root/openrc\" This will load
-Your credentials. Otherwise logout and log back in, your Nova Credentials will
-be auto-loaded when you log back in.
-
-You also have access to \"knife\" which can be used for modification and
-management of your Chef Server.
-
-
-================== NOTICE ==================
-      Your ROOT password has been reset
-
-Here are the details:
-
-Username : ${IAM}
-Password : ${SYSTEM_PW}
-
-
-** Please make a note of this! **
-"
-
-echo "AIOIO INSTALLATION COMPLETED: $(date +%y%m%d%H%M)" | tee /opt/aioio-installed.lock
-
-# Exit Zero
-exit 0
+success_exit
