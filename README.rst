@@ -72,6 +72,23 @@ Set this to override the Virt Type, DEFAULT is "qemu":
 Set this to override the Cinder Device, DEFAULT is "/opt/cinder.img":
   CINDER=""
 
+Set this to set the Neutron Interface, Only Set if you want to use Neutron
+  NEUTRON_ENABLED=True or False
+
+Set the Interface for Neutron
+  NEUTRON_INTERFACE=""
+
+Set the name of the Service
+  NEUTRON_NAME="quantum or neutron"
+
+Chef Server Override for Package
+  CHEF_SERVER=""
+
+Override the runlist with something different
+  RUN_LIST=""
+
+Disable roll back on Failure (NOTICE LETTER CASE)
+  DISABLE_ROLL_BACK=true or false
 
 ========
 
