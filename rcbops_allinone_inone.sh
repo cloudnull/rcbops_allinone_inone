@@ -287,6 +287,12 @@ file_cleanup() {
   # Remove REMI RPM
   [ -f "/tmp/remi-release-6.rpm" ] && rm /tmp/remi-release-6.rpm
 
+  # Remove MySQL Grants
+  [ -f "/etc/mysql_grants.sql" ] && rm /etc/mysql_grants.sql
+  
+  # Remove MySQL log file
+  [ -f "/var/log/mysqld.log.rpmsave" ] && rm /var/log/mysqld.log.rpmsave
+  
 }
 
 directory_cleanup() {
@@ -314,6 +320,9 @@ directory_cleanup() {
 
   # Remove chef-server etc Directory
   [ -d "/etc/chef-server" ] && rm -rf /etc/chef-server
+  
+  # Remove MYSQL Dir
+  [ -d "/etc/mysql" ] && rm -rf /etc/mysql
 
   # Remove Chef-server Directory
   [ -d "/var/chef" ] && rm -rf /var/chef
@@ -329,6 +338,9 @@ directory_cleanup() {
   
   # Remove chef-server logs
   [ -d "/var/log/chef-server" ] && rm -rf /var/log/chef-server
+  
+  # Remove MySQL Log Dir
+  [ -d "/var/log/mysql" ] && rm -rf /var/log/mysql
 
 }
 
