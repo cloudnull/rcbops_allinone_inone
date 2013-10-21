@@ -43,8 +43,8 @@ set -u
 # Here are the script Override Values.
 # Any of these override variables can be exported as environment variables.
 # ============================================================================
-# Disable role back on Failure
-# DISABLE_ROLE_BACK=True || False
+# Disable roll back on Failure (NOTICE LETTER CASE)
+# DISABLE_ROLL_BACK=true || false
 
 # Set this to override the RCBOPS Developer Mode, DEFAULT is False
 # DEVELOPER_MODE=True || False
@@ -229,8 +229,8 @@ function error_message() {
 }
 
 function error_exit() {
-  if ${DISABLE_ROLE_BACK};then
-    echo "NO ROLE BACK BEING DONE!"
+  if ${DISABLE_ROLL_BACK};then
+    echo "NO ROLL BACK BEING DONE!"
     error_message
   else
     set +e
@@ -442,8 +442,8 @@ if [ ! -f "/root/.ssh/id_rsa" ];then
     popd
 fi
 
-# Disable Role Back
-DISABLE_ROLE_BACK=${DISABLE_ROLE_BACK:-false}
+# Disable Roll Back
+DISABLE_ROLL_BACK=${DISABLE_ROLL_BACK:-false}
 
 # Chef Server Password
 CHEF_PW=${CHEF_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
