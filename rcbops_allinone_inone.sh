@@ -23,15 +23,15 @@ set -u
 # limitations under the License.
 
 
-# This script will install several bits
+# This script will install/configure several bits
 # ============================================================================
 # Openstack Controller
 # Openstack Compute
 # Horizon
 # Cinder is built on a loop file unless you specify a device
 # Nova-Network is used
-# Quantum is NOT being used
-# ubuntu 12.04 LTS Image
+# Quantum is NOT being used by Default
+# Package Installation of Openstack for Ubuntu 12.04 LTS or CentOS6(RHEL6)
 # cirros Image
 # fedora Image
 # Qemu is the default Virt Driver
@@ -43,6 +43,9 @@ set -u
 # Here are the script Override Values.
 # Any of these override variables can be exported as environment variables.
 # ============================================================================
+# Disable role back on Failure
+# DISABLE_ROLE_BACK=True || False
+
 # Set this to override the RCBOPS Developer Mode, DEFAULT is False
 # DEVELOPER_MODE=True || False
 
@@ -88,25 +91,19 @@ set -u
 # NEUTRON_NAME="quantum"
 # ==========================================================================
 
+# Chef Server Override for Package
+# CHEF_SERVER=""
 
-# OS Check
+# Override the runlist with something different
+# RUN_LIST=""
+
+
+# Package Removal
 # ==========================================================================
-if [ ! -f "/etc/lsb-release"  ]; then
-    echo "Not able to determine the OS Type."
-    exit 1
-elif [ ! "$(grep -i ubuntu /etc/lsb-release)" ];then
-    echo "This is not Ubuntu, So this script will not work."
-    exit 1
-fi
-
-
-# Error Handler
-# ==========================================================================
-function error_exit() {
-
+function remove_apt_packages() {
   # Remove known Packages
-  for known_package in rabbitmq-server chef-server chef; do
-    if [ "$(dpkg -l | grep ${known_package})" ];then
+  for known_package in $(dpkg -l | grep -i -e rabbitmq-server -e chef-server -e chef -e mysql | awk '{print $2}'); do
+    if [ "${known_package}" ];then
       apt-get -y remove ${known_package}
       apt-get -y purge ${known_package}
     fi
@@ -114,120 +111,265 @@ function error_exit() {
 
   # Search for Openstack Packages
   for os_package in $(dpkg -l | grep -i openstack | awk '{print $2}'); do
-    apt-get -y remove ${os_package}
-    apt-get -y purge ${os_package}
+    if [ "${os_package}" ];then
+      apt-get -y remove ${os_package}
+      apt-get -y purge ${os_package}
+    fi
   done
 
   # Remove all packages which are no longer needed
-  apt-get -y autoremove
+  apt-get -y autoremove 
+}
 
-  echo "Removing Known Files and Folders."
+function remove_rpm_packages() {
+  # Remove known Packages
+  for known_package in $(rpm -qa | grep -i -e epel-release-6 -e remi-release-6 -e rabbitmq -e chef -e mysql); do
+    if [ "${known_package}" ];then
+      yum -y remove ${known_package}
+    fi
+  done
+  
+  # Search for Openstack Packages
+  for os_package in $(rpm -qa | grep -i openstack); do
+    if [ "${os_package}" ];then
+      yum -y remove ${os_package}
+    fi
+  done
+  
+  # Remove all packages which are no longer being used
+  EXTRA_PACKAGES=$(package-cleanup --quiet --leaves --exclude-bin)
+  for extra_package in ${EXTRA_PACKAGES};do
+    if [ "${extra_package}" ];then
+      yum remove -y ${extra_package}
+    fi
+  done
+}
 
-  # Delete Downloaded Chef DEB
-  if [ -f "/tmp/chef_server.deb" ];then
-    rm "/tmp/chef_server.deb"
+
+# Configure Rabbit
+# ==========================================================================
+function rabbit_setup() {
+  rabbitmqctl add_vhost /chef
+  rabbitmqctl add_user chef ${RMQ_PW}
+  rabbitmqctl set_permissions -p /chef chef '.*' '.*' '.*'
+}
+
+
+# Package Install
+# ==========================================================================
+function install_apt_packages() {
+  # Update System
+  apt-get update && apt-get -y upgrade
+  
+  # Install Packages
+  apt-get install -y rabbitmq-server git curl lvm2
+  
+  # Setup shared RabbitMQ
+  rabbit_setup
+
+  # Download/Install Chef
+  CHEF="https://www.opscode.com/chef/download-server?p=ubuntu&pv=12.04&m=x86_64"
+  CHEF_SERVER=${CHEF_SERVER:-$CHEF}
+  wget -O /tmp/chef_server.deb ${CHEF_SERVER}
+  dpkg -i /tmp/chef_server.deb
+}
+
+function install_yum_packages() {
+  # Install BASE Packages
+  yum -y install git lvm2
+
+  # Install ERLANG
+  pushd /tmp
+  wget http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
+  wget http://rpms.famillecollet.com/enterprise/remi-release-6.rpm
+  rpm -Uvh remi-release-6*.rpm epel-release-6*.rpm
+  popd
+  yum -y install erlang
+  
+  # Install RabbitMQ
+  RABBITMQ="http://www.rabbitmq.com/releases/rabbitmq-server/v2.8.7/rabbitmq-server-2.8.7-1.noarch.rpm"
+  wget -O /tmp/rabbitmq.rpm ${RABBITMQ}
+  rpm --import http://www.rabbitmq.com/rabbitmq-signing-key-public.asc
+  rpm -Uvh /tmp/rabbitmq.rpm
+  chkconfig rabbitmq-server on
+  /sbin/service rabbitmq-server start
+  
+  # Setup shared RabbitMQ
+  rabbit_setup
+  
+  # Download/Install Chef
+  CHEF="https://www.opscode.com/chef/download-server?p=el&pv=6&m=x86_64"
+  CHEF_SERVER=${CHEF_SERVER:-$CHEF}
+  wget -O /tmp/chef_server.rpm ${CHEF_SERVER}
+  yum install -y /tmp/chef_server.rpm
+}
+
+
+# OS Check
+# ==========================================================================
+if [ "$(grep -i -e redhat -e centos /etc/redhat-release)"  ]; then
+  REMOVE_SYSTEM_PACKAGES=remove_rpm_packages
+  PACKAGE_INSTALL=install_yum_packages
+elif [ "$(grep -i ubuntu /etc/lsb-release)" ];then
+  REMOVE_SYSTEM_PACKAGES=remove_apt_packages
+  PACKAGE_INSTALL=install_apt_packages
+else
+  echo "This is not Ubuntu, So this script will not work."
+  exit 1
+fi
+
+
+# Error Handler
+# ==========================================================================
+function error_message() {
+  # Print Messages
+  echo "ERROR! $@"
+  exit 1
+
+}
+
+function error_exit() {
+  if ${DISABLE_ROLE_BACK};then
+    echo "NO ROLE BACK BEING DONE!"
+    error_message
+  else
+    set +e
+    set +u
+    set +v
+
+    # Remove Packages
+    echo "Removing Known Files and Folders."
+    ${REMOVE_SYSTEM_PACKAGES}
+
+    # Cleanup all the things
+    service_stop
+    cinder_device_remove
+    file_cleanup
+    directory_cleanup
+    error_message
   fi
 
-  # remove temp opt chef-server directory
-  if [ -d "/tmp/opt/chef-server" ];then
-    rm -rf /tmp/opt/chef-server
-  fi
+}
+
+file_cleanup() {
+  echo "Performing File Cleanup"
+
+  # Remove Downloaded Chef DEB
+  [ -f "/tmp/chef_server.deb" ] && rm /tmp/chef_server.deb
 
   # Remove CINDER Device
-  if [ -f "/opt/cinder.img" ];then
-    rm /opt/cinder.img
-  fi
+  [ -f "/opt/cinder.img" ] && rm /opt/cinder.img
 
-  # Remove All in one directory
-  if [ -d "/opt/allinoneinone/" ];then
-    rm -rf /opt/allinoneinone/
-  fi
+  # Remove pubic key
+  [ -f "/root/.ssh/id_rsa.pub" ] && rm /root/.ssh/id_rsa.pub
 
-  # Remove opt chef-server directory
-  if [ -d "/opt/chef-server" ];then
-    rm -rf /opt/chef-server
-  fi
-
-  # Remove opt chef directory
-  if [ -d "/opt/chef" ];then
-    rm -rf /opt/chef
-  fi
-
-  # remove Chef Directory
-  if [ -d "/root/.chef" ];then
-    rm -rf /root/.chef
-  fi
-
-  # remove pubic key
-  if [ -f "/root/.ssh/id_rsa.pub" ];then
-    rm /root/.ssh/id_rsa.pub
-  fi
-
-  # remove private key
-  if [ -f "/root/.ssh/id_rsa" ];then
-    rm /root/.ssh/id_rsa
-  fi
+  # Remove private key
+  [ -f "/root/.ssh/id_rsa" ] && rm /root/.ssh/id_rsa
 
   # Remove source file
-  if [ -f "/root/openrc" ];then
-    rm /root/openrc
-  fi
+  [ -f "/root/openrc" ] && rm /root/openrc
 
-  # remove chef-server etc Directory
-  if [ -d "/etc/chef" ];then
-    rm -rf /etc/chef
-  fi
+  # Remove EPEL repo
+  [ -f "/etc/yum.repos.d/epel.repo" ] && rm /etc/yum.repos.d/epel.repo
+  
+  # Remove EPEL Testing repo
+  [ -f "/etc/yum.repos.d/epel-testing.repo" ] && rm /etc/yum.repos.d/epel-testing.repo
 
-  # remove chef-server etc Directory
-  if [ -d "/etc/chef-server" ];then
-    rm -rf /etc/chef-server
-  fi
+  # Remove REMI repo
+  [ -f "/etc/yum.repos.d/remi.repo" ] && rm /etc/yum.repos.d/remi.repo
+  
+  # Remove EPEL RPM
+  [ -f "/tmp/epel-release-6-8.noarch.rpm" ] && rm /tmp/epel-release-6-8.noarch.rpm
+  
+  # Remove RabbitMQ RPM
+  [ -f "/tmp/rabbitmq.rpm" ] && rm /tmp/rabbitmq.rpm 
+  
+  # Remove REMI RPM
+  [ -f "/tmp/remi-release-6.rpm" ] && rm /tmp/remi-release-6.rpm
 
-  # remove Chef-server Directory
-  if [ -d "/var/chef" ];then
-    rm -rf /var/chef
-  fi
+}
+
+directory_cleanup() {
+  echo "Performing Directory Cleanup"
+
+  # Remove temp opt chef-server directory
+  [ -d "/tmp/opt/chef-server" ] && rm -rf /tmp/opt/chef-server
+
+  # Remove All in one directory
+  [ -d "/opt/allinoneinone/" ] && rm -rf /opt/allinoneinone/
+  
+  [ -d "/opt/aioio-installed.lock" ] && rm /opt/aioio-installed.lock
+
+  # Remove opt chef-server directory
+  [ -d "/opt/chef-server" ] && rm -rf /opt/chef-server
+
+  # Remove opt chef directory
+  [ -d "/opt/chef" ] && rm -rf /opt/chef
+
+  # Remove Chef Directory
+  [ -d "/root/.chef" ] && rm -rf /root/.chef
+
+  # Remove chef-server etc Directory
+  [ -d "/etc/chef" ] && rm -rf /etc/chef
+
+  # Remove chef-server etc Directory
+  [ -d "/etc/chef-server" ] && rm -rf /etc/chef-server
+
+  # Remove Chef-server Directory
+  [ -d "/var/chef" ] && rm -rf /var/chef
 
   # Remove Var chef-server directory
-  if [ -d "/var/opt/chef-server" ];then
-    rm -rf /var/opt/chef-server
-  fi
+  [ -d "/var/opt/chef-server" ] && rm -rf /var/opt/chef-server
 
   # Remove rabbitmq directory
-  if [ -d "/var/lib/rabbitmq/" ];then
-    rm -rf /var/lib/rabbitmq/
-  fi
+  [ -d "/var/lib/rabbitmq/" ] && rm -rf /var/lib/rabbitmq/
 
+  # Remove Databases
+  [ -d "/var/lib/mysql/" ] && rm -rf /var/lib/mysql/
+  
   # Remove chef-server logs
-  if [ -d "/var/log/chef-server" ];then
-    rm -rf /var/log/chef-server
-  fi
+  [ -d "/var/log/chef-server" ] && rm -rf /var/log/chef-server
 
+}
 
+cinder_device_remove() {
+  # Remove any loopback devices setup
+  for loopback_dev in $(losetup -a | awk -F':' '{print $1}');do 
+    if [ "${loopback_dev}" ];then 
+      losetup -d ${loopback_dev}
+    fi
+  done
+
+}
+
+service_stop() {
   # Stop Service
-  for run in {1..2};do
-    for service in nginx chef-server-webui erchef bookshelf chef-expander chef-solr postgresql; do
-      PID=$(ps auxf | grep ${service} | grep -v grep | awk '{print $2}')
-      if [ "${PID}" ];then
-        kill ${PID}
+  for service in nginx chef-server-webui erchef bookshelf chef-expander chef-solr postgresql; do
+    for pid in $(ps auxf | grep ${service} | grep -v grep | awk '{print $2}'); do
+      if [ "${pid}" ];then
+        if [ "$(ps auxf | grep ${pid} | grep -v grep | awk '{print $2}')" ];then
+          kill ${pid}
+        fi
       fi
     done
   done
 
-  # Print Messages
-  echo "ERROR! $@"
-  exit 1
 }
 
 # Trap all Death Signals and Errors
 trap "error_exit 'Received signal SIGHUP'" SIGHUP
 trap "error_exit 'Received signal SIGINT'" SIGINT
 trap "error_exit 'Received signal SIGTERM'" SIGTERM
-trap "error_exit 'ERROR IN SCRIPT'" ERR
+trap 'error_exit ${LINENO} ${$?}' ERR
 
 # Begin the Install Process
 # ============================================================================
-
+# Check for previous Installation
+if [ -f "/opt/aioio-installed.lock" ];then
+  echo "Lock File found at \"/opt/aioio-installed.lock\""
+  echo "I am assuming that this installation has already been completed on this box."
+  exit 1
+fi
 
 # Make the system key used for bootstrapping self
 if [ ! -f "/root/.ssh/id_rsa" ];then
@@ -237,9 +379,8 @@ if [ ! -f "/root/.ssh/id_rsa" ];then
     popd
 fi
 
-# Upgrade packages and repo list.
-apt-get update && apt-get -y upgrade
-apt-get install -y rabbitmq-server git curl lvm2
+# Disable Role Back
+DISABLE_ROLE_BACK=${DISABLE_ROLE_BACK:-false}
 
 # Chef Server Password
 CHEF_PW=${CHEF_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
@@ -268,21 +409,18 @@ NEUTRON_INTERFACE=${NEUTRON_INTERFACE:-None}
 # Set the Name of the Neutron Service
 NEUTRON_NAME=${NEUTRON_NAME:-"quantum"}
 
-# Configure Rabbit
-rabbitmqctl add_vhost /chef
-rabbitmqctl add_user chef ${RMQ_PW}
-rabbitmqctl set_permissions -p /chef chef '.*' '.*' '.*'
+RUN_LIST=${RUN_LIST:-"role[allinone],role[cinder-all]"}
+
+# Install Packages
+${PACKAGE_INSTALL}
 
 # Grab existing Chef Cookie
 CHEF_COOKIE=$(cat /var/lib/rabbitmq/.erlang.cookie)
 
-# Download/Install Chef
-wget -O /tmp/chef_server.deb 'https://www.opscode.com/chef/download-server?p=ubuntu&pv=12.04&m=x86_64'
-dpkg -i /tmp/chef_server.deb
-
 # Configure Chef Vars
 mkdir -p /etc/chef-server
 cat > /etc/chef-server/chef-server.rb <<EOF
+erchef['s3_url_ttl'] = 3600
 nginx["ssl_port"] = 4000
 nginx["non_ssl_port"] = 4080
 nginx["enable_non_ssl"] = true
@@ -311,6 +449,12 @@ chef_server_url          'https://localhost:4000'
 cache_options( :path => '/root/.chef/checksums' )
 cookbook_path            [ '/opt/allinoneinone/chef-cookbooks/cookbooks' ]
 EOF
+
+# Set the systems IP ADDRESS
+SYS_IP=$(ohai ipaddress | awk '/^ / {gsub(/ *\"/, ""); print; exit}')
+
+# Export Chef URL
+export CHEF_SERVER_URL=https://${SYS_IP}:4000
 
 # Get RcbOps Cookbooks
 mkdir -p /opt/allinoneinone
@@ -508,12 +652,6 @@ knife environment from file allinoneinone.json
 # Exit Work Dir
 popd
 
-# Set the systems IP ADDRESS
-SYS_IP=$(ohai ipaddress | awk '/^ / {gsub(/ *\"/, ""); print; exit}')
-
-# Export Chef URL
-export CHEF_SERVER_URL=https://${SYS_IP}:4000
-
 # Make Cinder Device
 if [ -b "${CINDER}" ];then
     pvcreate ${CINDER}
@@ -531,7 +669,7 @@ else
 fi
 
 # Begin Cooking
-knife bootstrap localhost -E allinoneinone -r 'role[allinone],role[cinder-all]'
+knife bootstrap localhost -E allinoneinone -r ${RUN_LIST}
 
 # go to root home
 pushd /root
@@ -553,15 +691,25 @@ echo "export EDITOR=vim" | tee -a .bashrc
 popd
 
 # Remove MOTD files
-rm /etc/motd
-rm /var/run/motd
+if [ -f "/etc/motd" ];then
+  rm /etc/motd
+fi
+
+if [ -f "/var/run/motd" ];then
+  rm /var/run/motd
+fi
 
 # Remove PAM motd modules from config
-sed -i '/pam_motd.so/ s/^/#\ /' /etc/pam.d/login
-sed -i '/pam_motd.so/ s/^/#\ /' /etc/pam.d/sshd
+if [ -f "/etc/pam.d/login" ];then
+  sed -i '/pam_motd.so/ s/^/#\ /' /etc/pam.d/login
+fi
+
+if [ -f "/etc/pam.d/sshd" ];then
+  sed -i '/pam_motd.so/ s/^/#\ /' /etc/pam.d/sshd
+fi
 
 # Reset users Password post installation
-IAM=$(whoami)
+IAM=$(logname)
 echo -e "${SYSTEM_PW}\n${SYSTEM_PW}" | ($(which passwd) ${IAM})
 
 # Notify the users and set new the MOTD
@@ -610,6 +758,8 @@ Password : ${SYSTEM_PW}
 
 ** Please make a note of this! **
 "
+
+echo "AIOIO INSTALLATION COMPLETED: $(date +%y%m%d%H%M)" | tee /opt/aioio-installed.lock
 
 # Exit Zero
 exit 0
