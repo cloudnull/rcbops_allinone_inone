@@ -355,9 +355,16 @@ cinder_device_remove() {
 }
 
 service_stop() {
+  # Chef Services
+  SERVICES="nginx chef-server-webui erchef bookshelf chef "
+  # Openstack Services
+  SERVICES+="heat nova glance ceilometer keystone horizon "
+  # General Services
+  SERVICES+="apache mysql httpd libvirt "
+
   # Stop Service
-  for service in nginx chef-server-webui erchef bookshelf chef-expander chef-solr postgresql; do
-    for pid in $(ps auxf | grep ${service} | grep -v grep | awk '{print $2}'); do
+  for service in ${SERVICES}; do
+    for pid in $(ps auxf | grep -i ${service} | grep -v grep | awk '{print $2}'); do
       if [ "${pid}" ];then
         if [ "$(ps auxf | grep ${pid} | grep -v grep | awk '{print $2}')" ];then
           kill ${pid}
