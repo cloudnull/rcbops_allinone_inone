@@ -224,6 +224,18 @@ function install_yum_packages() {
 
 }
 
+function restart_all_openstack_services() {
+  set +e
+  set +u
+  for srv in $(ls /etc/init.d/);do
+    for srv_name in ${OPENSTACK_SERVICES};do 
+      if [ "$(echo ${srv} | grep ${srv_name})" ];then 
+        /etc/init.d/${srv} restart; 
+      fi
+    done
+  done
+}
+
 
 # OS Check
 # ==========================================================================
@@ -287,7 +299,7 @@ file_cleanup() {
   [ -f "/root/.ssh/id_rsa" ] && rm /root/.ssh/id_rsa
 
   # Remove MySQL cnf file
-  [ -f "/root/.my.cnf" ] && /root/.my.cnf
+  [ -f "/root/.my.cnf" ] && rm /root/.my.cnf
   
   # Remove source file
   [ -f "/root/openrc" ] && rm /root/openrc
@@ -302,7 +314,7 @@ file_cleanup() {
   [ -f "/etc/yum.repos.d/remi.repo" ] && rm /etc/yum.repos.d/remi.repo
   
   # Remove MYSQL cnf file
-  [ -f "/etc/my.cnf.rpmsave" ] && /etc/my.cnf.rpmsave
+  [ -f "/etc/my.cnf.rpmsave" ] && rm /etc/my.cnf.rpmsave
 
   # Remove MySQL Grants
   [ -f "/etc/mysql_grants.sql" ] && rm /etc/mysql_grants.sql
@@ -381,12 +393,10 @@ cinder_device_remove() {
 }
 
 service_stop() {
-  # Chef Services
-  SERVICES="nginx chef-server-webui erchef bookshelf chef "
+  # general Services
+  SERVICES="nginx chef-server-webui erchef bookshelf chef apache mysql httpd libvirt "
   # Openstack Services
-  SERVICES+="heat nova glance ceilometer keystone horizon "
-  # General Services
-  SERVICES+="apache mysql httpd libvirt "
+  SERVICES+=${OPENSTACK_SERVICES}
 
   # Stop Service
   for service in ${SERVICES}; do
@@ -411,52 +421,54 @@ function success_exit() {
   IAM=$(logname)
   echo -e "${SYSTEM_PW}\n${SYSTEM_PW}" | ($(which passwd) ${IAM})
 
+  restart_all_openstack_services
+  
   # Notify the users and set new the MOTD
   echo -e "
 
-  ** NOTICE **
+** NOTICE **
 
-  This is an Openstack Deployment based on the Rackspace Private Cloud Software.
-  # ============================================================================
+This is an Openstack Deployment based on the Rackspace Private Cloud Software.
+# ============================================================================
 
-  Cookbook Branch/Version is     : ${COOKBOOK_VERSION}
-  Your RabbitMQ Password is      : ${RMQ_PW}
-  Your OpenStack Password is     : ${NOVA_PW}
-  Admin SSH key has been set as  : adminKey
-  Cinder volumes are located     : ${CINDER}
-  Openstack Cred File is located : /root/openrc
-  Horizon URL is                 : https://${SYS_IP}:443
+Cookbook Branch/Version is     : ${COOKBOOK_VERSION}
+Your RabbitMQ Password is      : ${RMQ_PW}
+Your OpenStack Password is     : ${NOVA_PW}
+Admin SSH key has been set as  : adminKey
+Cinder volumes are located     : ${CINDER}
+Openstack Cred File is located : /root/openrc
+Horizon URL is                 : https://${SYS_IP}:443
 
-  Chef Server URL is             : ${CHEF_SERVER_URL}
-  Chef Server Password is        : ${CHEF_PW}
-  Your knife.rb is located       : /root/.chef/knife.rb
-  All cookbooks are located      : /opt/allinoneinone
+Chef Server URL is             : ${CHEF_SERVER_URL}
+Chef Server Password is        : ${CHEF_PW}
+Your knife.rb is located       : /root/.chef/knife.rb
+All cookbooks are located      : /opt/allinoneinone
 
-  # ============================================================================
+# ============================================================================
 
-  " | tee /etc/motd
+" | tee /etc/motd
 
   # Tell users how to get started on the CLI
   echo -e "
-  For instant access to Nova please run \"source /root/openrc\" This will load
-  Your credentials. Otherwise logout and log back in, your Nova Credentials will
-  be auto-loaded when you log back in.
+For instant access to Nova please run \"source /root/openrc\" This will load
+Your credentials. Otherwise logout and log back in, your Nova Credentials will
+be auto-loaded when you log back in.
 
-  You also have access to \"knife\" which can be used for modification and
-  management of your Chef Server.
-
-
-  ================== NOTICE ==================
-        Your ROOT password has been reset
-
-  Here are the details:
-
-  Username : ${IAM}
-  Password : ${SYSTEM_PW}
+You also have access to \"knife\" which can be used for modification and
+management of your Chef Server.
 
 
-  ** Please make a note of this! **
-  "
+================== NOTICE ==================
+      Your ROOT password has been reset
+
+Here are the details:
+
+Username : ${IAM}
+Password : ${SYSTEM_PW}
+
+
+** Please make a note of this! **
+"
 
   # Exit Zero
   exit 0
@@ -486,6 +498,9 @@ if [ ! -f "/root/.ssh/id_rsa" ];then
     cat id_rsa.pub | tee -a authorized_keys
     popd
 fi
+
+# List of all Services
+OPENSTACK_SERVICES="cinder glance nova keystone ceilometer heat horizon "
 
 # Disable Roll Back
 DISABLE_ROLL_BACK=${DISABLE_ROLL_BACK:-false}
