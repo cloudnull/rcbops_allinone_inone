@@ -12,13 +12,33 @@ General Overview
 ~~~~~~~~~~~~~~~~
 
 
-I made this script such that you can stand up an Openstack based on Rackspace Private Cloud Software in minutes and play with it. This is a VERY simple script which will build you an environment based on the Rackspace Private Cloud Software. This script is presently using the v4.1.2 TAG by default from the rcbops-cookbooks repo : (https://github.com/rcbops/chef-cookbooks) though an override can be set to use any and all RCBOPS releases.
+This script was create to allow for rapid deployment of a **testing** node based on the Rackspace Private Cloud Chef Cookbooks.
+
+This will stand up an Openstack in minutes and once the installation is complete, you will be able to test drive Openstack while seeing what the Rackspace Private Cloud Software is capable of. 
+
+This is a VERY simple script but does allow for some control into the setup and configuration process, please see the **Configuration Options** section for more information.
+
+This script is presently using the v4.1.2 TAG by default from the rcbops-cookbooks repo : (https://github.com/rcbops/chef-cookbooks). See the **Configuration Options** section on available options if you would like to try a different version of the Rackspace Private Cloud Software.
 
 
 This script works with Ubuntu 12.04 and CentOS6/RHEL6
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This script will install the following:
+
+MINIMUM SYSTEM REQUIREMENTS
+---------------------------
+
+* Linux Operating System (*CentOS/RHEL or Ubuntu*)
+* Dual Core Processor
+* 2GB or RAM
+* 10GB of Storage
+
+
+
+OVERVIEW
+--------
+
+This script will install and configure the following:
 
 * Openstack Controller
 * Openstack Compute
@@ -32,6 +52,18 @@ This script will install the following:
 * The Latest Stable Chef Server
 * Chef Client
 * Knife
+
+
+NOTICE
+------
+
+This installation scrip has **ONLY** been tested on the following platforms:
+
+* KVM
+* Physical Server
+* Rackspace Cloud Server
+* Amazon AWS
+* VMWare Fusion (*EXTRAS MUST BE INSTALLED*)
 
 
 ========
