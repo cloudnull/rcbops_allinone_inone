@@ -102,11 +102,13 @@ set -u
 # ==========================================================================
 function remove_apt_packages() {
   # Remove known Packages
-  for known_package in $(dpkg -l | grep -i -e rabbitmq-server -e chef-server -e chef -e mysql | awk '{print $2}'); do
-    if [ "${known_package}" ];then
-      apt-get -y remove ${known_package}
-      apt-get -y purge ${known_package}
-    fi
+  for package in ${GENERAL_PACKAGES};do 
+    for known_package in $(dpkg -l | grep -i ${package} | awk '{print $2}'); do
+      if [ "${known_package}" ];then
+        apt-get -y remove ${known_package}
+        apt-get -y purge ${known_package}
+      fi
+    done
   done
 
   # Search for Openstack Packages
@@ -123,10 +125,12 @@ function remove_apt_packages() {
 
 function remove_rpm_packages() {
   # Remove known Packages
-  for known_package in $(rpm -qa | grep -i -e epel-release-6 -e remi-release-6 -e rabbitmq -e chef -e mysql); do
-    if [ "${known_package}" ];then
-      yum -y remove ${known_package}
-    fi
+  for package in ${GENERAL_PACKAGES};do 
+    for known_package in $(rpm -qa | grep -i ${package}); do
+      if [ "${known_package}" ];then
+        yum -y remove ${known_package}
+      fi
+    done
   done
   
   # Search for Openstack Packages
@@ -319,6 +323,9 @@ file_cleanup() {
   # Remove MySQL Grants
   [ -f "/etc/mysql_grants.sql" ] && rm /etc/mysql_grants.sql
   
+  # Remove Chef init
+  [ -f "/etc/init/chef-server-runsvdir.conf" ] && rm /etc/init/chef-server-runsvdir.conf
+  
   # Remove EPEL RPM
   [ -f "/tmp/epel-release-6-8.noarch.rpm" ] && rm /tmp/epel-release-6-8.noarch.rpm
   
@@ -330,7 +337,12 @@ file_cleanup() {
 
   # Remove MySQL log file
   [ -f "/var/log/mysqld.log.rpmsave" ] && rm /var/log/mysqld.log.rpmsave
- 
+
+  # Remove ALL temp files
+  for temp_file in $(ls /tmp/);do
+    rm -rf /tmp/${temp_file}
+  done
+  
 }
 
 directory_cleanup() {
@@ -355,12 +367,18 @@ directory_cleanup() {
 
   # Remove chef-server etc Directory
   [ -d "/etc/chef" ] && rm -rf /etc/chef
+  
+  # Remove Rabbit etc directory
+  [ -d "/etc/rabbitmq" ] && rm -rf /etc/rabbitmq
 
   # Remove chef-server etc Directory
   [ -d "/etc/chef-server" ] && rm -rf /etc/chef-server
   
   # Remove MYSQL Dir
   [ -d "/etc/mysql" ] && rm -rf /etc/mysql
+  
+  # Remove Rabbit DIR
+  [ -d "/usr/lib/rabbitmq" ] && rm -rf /usr/lib/rabbitmq
 
   # Remove Chef-server Directory
   [ -d "/var/chef" ] && rm -rf /var/chef
@@ -379,6 +397,9 @@ directory_cleanup() {
   
   # Remove MySQL Log Dir
   [ -d "/var/log/mysql" ] && rm -rf /var/log/mysql
+  
+  # Remove Rabbit Log Dir
+  [ -d "/var/log/rabbitmq" ] && rm -rf /var/log/rabbitmq
 
 }
 
@@ -394,7 +415,7 @@ cinder_device_remove() {
 
 service_stop() {
   # general Services
-  SERVICES="nginx chef-server-webui erchef bookshelf chef apache mysql httpd libvirt "
+  SERVICES="rabbitmq nginx chef-server-webui erchef bookshelf chef apache mysql httpd libvirt "
   # Openstack Services
   SERVICES+=${OPENSTACK_SERVICES}
 
@@ -501,6 +522,9 @@ fi
 
 # List of all Services
 OPENSTACK_SERVICES="cinder glance nova keystone ceilometer heat horizon "
+
+# General Packages
+GENERAL_PACKAGES="rabbitmq chef mysql monit collectd epel-release-6 remi-release-6 nginx apache httpd "
 
 # Disable Roll Back
 DISABLE_ROLL_BACK=${DISABLE_ROLL_BACK:-false}
