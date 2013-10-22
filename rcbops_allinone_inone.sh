@@ -143,6 +143,15 @@ function remove_rpm_packages() {
       yum remove -y ${extra_package}
     fi
   done
+  
+  # Restore IPTables if set
+  if [ -f "/etc/iptables.original" ];then
+    if [ "$(which iptables-restore)" ];then
+      $(which iptables-restore) < /etc/iptables.original
+      service iptables save
+    fi
+  fi
+
 }
 
 
@@ -178,6 +187,16 @@ function install_yum_packages() {
   # Install BASE Packages
   yum -y install git lvm2
 
+  if [ "$(which iptables-save)" ];then
+    $(which iptables-save) > /etc/iptables.original
+  fi
+  
+  if [ "$(which iptables)" ];then
+    $(which iptables) -I INPUT -m tcp -p tcp --dport 443 -j ACCEPT
+    $(which iptables) -I INPUT -m tcp -p tcp --dport 80 -j ACCEPT
+    service iptables save
+  fi
+  
   # Install ERLANG
   pushd /tmp
   wget http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
@@ -202,6 +221,7 @@ function install_yum_packages() {
   CHEF_SERVER=${CHEF_SERVER:-$CHEF}
   wget -O /tmp/chef_server.rpm ${CHEF_SERVER}
   yum install -y /tmp/chef_server.rpm
+
 }
 
 
