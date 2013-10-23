@@ -14,7 +14,7 @@ General Overview
 
 This script was create to allow for rapid deployment of a **testing** node based on the Rackspace Private Cloud Chef Cookbooks.
 
-This will stand up an Openstack in minutes and once the installation is complete, you will be able to test drive Openstack while seeing what the Rackspace Private Cloud Software is capable of. 
+This will stand up an Openstack in minutes and once the installation is complete, you will be able to test drive Openstack while seeing what the Rackspace Private Cloud Software is capable of.
 
 This is a VERY simple script but does allow for some control into the setup and configuration process, please see the **Configuration Options** section for more information.
 
@@ -115,8 +115,8 @@ Set the Interface for Neutron
 Set the name of the Service
   NEUTRON_NAME="quantum or neutron"
 
-Chef Server Override for Package
-  CHEF_SERVER=""
+Chef Server Override for Package URL
+  CHEF_SERVER_PACKAGE_URL=""
 
 Override the runlist with something different
   RUN_LIST=""

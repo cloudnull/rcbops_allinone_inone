@@ -91,8 +91,8 @@ set -u
 # NEUTRON_NAME="quantum"
 # ==========================================================================
 
-# Chef Server Override for Package
-# CHEF_SERVER=""
+# Chef Server Override for Package URL
+# CHEF_SERVER_PACKAGE_URL=""
 
 # Override the runlist with something different
 # RUN_LIST=""
@@ -102,7 +102,7 @@ set -u
 # ==========================================================================
 function remove_apt_packages() {
   # Remove known Packages
-  for package in ${GENERAL_PACKAGES};do 
+  for package in ${GENERAL_PACKAGES};do
     for known_package in $(dpkg -l | grep -i ${package} | awk '{print $2}'); do
       if [ "${known_package}" ];then
         apt-get -y remove ${known_package}
@@ -120,26 +120,26 @@ function remove_apt_packages() {
   done
 
   # Remove all packages which are no longer needed
-  apt-get -y autoremove 
+  apt-get -y autoremove
 }
 
 function remove_rpm_packages() {
   # Remove known Packages
-  for package in ${GENERAL_PACKAGES};do 
+  for package in ${GENERAL_PACKAGES};do
     for known_package in $(rpm -qa | grep -i ${package}); do
       if [ "${known_package}" ];then
         yum -y remove ${known_package}
       fi
     done
   done
-  
+
   # Search for Openstack Packages
   for os_package in $(rpm -qa | grep -i openstack); do
     if [ "${os_package}" ];then
       yum -y remove ${os_package}
     fi
   done
-  
+
   # Remove all packages which are no longer being used
   EXTRA_PACKAGES=$(package-cleanup --quiet --leaves --exclude-bin)
   for extra_package in ${EXTRA_PACKAGES};do
@@ -147,7 +147,7 @@ function remove_rpm_packages() {
       yum remove -y ${extra_package}
     fi
   done
-  
+
   # Restore IPTables if set
   if [ -f "/etc/iptables.original" ];then
     if [ "$(which iptables-restore)" ];then
@@ -173,17 +173,17 @@ function rabbit_setup() {
 function install_apt_packages() {
   # Update System
   apt-get update && apt-get -y upgrade
-  
+
   # Install Packages
   apt-get install -y rabbitmq-server git curl lvm2
-  
+
   # Setup shared RabbitMQ
   rabbit_setup
 
   # Download/Install Chef
   CHEF="https://www.opscode.com/chef/download-server?p=ubuntu&pv=12.04&m=x86_64"
-  CHEF_SERVER=${CHEF_SERVER:-$CHEF}
-  wget -O /tmp/chef_server.deb ${CHEF_SERVER}
+  CHEF_SERVER_PACKAGE_URL=${CHEF_SERVER_PACKAGE_URL:-$CHEF}
+  wget -O /tmp/chef_server.deb ${CHEF_SERVER_PACKAGE_URL}
   dpkg -i /tmp/chef_server.deb
 }
 
@@ -194,13 +194,13 @@ function install_yum_packages() {
   if [ "$(which iptables-save)" ];then
     $(which iptables-save) > /etc/iptables.original
   fi
-  
+
   if [ "$(which iptables)" ];then
     $(which iptables) -I INPUT -m tcp -p tcp --dport 443 -j ACCEPT
     $(which iptables) -I INPUT -m tcp -p tcp --dport 80 -j ACCEPT
     service iptables save
   fi
-  
+
   # Install ERLANG
   pushd /tmp
   wget http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
@@ -208,7 +208,7 @@ function install_yum_packages() {
   rpm -Uvh remi-release-6*.rpm epel-release-6*.rpm
   popd
   yum -y install erlang
-  
+
   # Install RabbitMQ
   RABBITMQ="http://www.rabbitmq.com/releases/rabbitmq-server/v2.8.7/rabbitmq-server-2.8.7-1.noarch.rpm"
   wget -O /tmp/rabbitmq.rpm ${RABBITMQ}
@@ -216,28 +216,16 @@ function install_yum_packages() {
   rpm -Uvh /tmp/rabbitmq.rpm
   chkconfig rabbitmq-server on
   /sbin/service rabbitmq-server start
-  
+
   # Setup shared RabbitMQ
   rabbit_setup
-  
+
   # Download/Install Chef
   CHEF="https://www.opscode.com/chef/download-server?p=el&pv=6&m=x86_64"
-  CHEF_SERVER=${CHEF_SERVER:-$CHEF}
-  wget -O /tmp/chef_server.rpm ${CHEF_SERVER}
+  CHEF_SERVER_PACKAGE_URL=${CHEF_SERVER_PACKAGE_URL:-$CHEF}
+  wget -O /tmp/chef_server.rpm ${CHEF_SERVER_PACKAGE_URL}
   yum install -y /tmp/chef_server.rpm
 
-}
-
-function restart_all_openstack_services() {
-  set +e
-  set +u
-  for srv in $(ls /etc/init.d/);do
-    for srv_name in ${OPENSTACK_SERVICES};do 
-      if [ "$(echo ${srv} | grep ${srv_name})" ];then 
-        /etc/init.d/${srv} restart; 
-      fi
-    done
-  done
 }
 
 
@@ -304,34 +292,34 @@ file_cleanup() {
 
   # Remove MySQL cnf file
   [ -f "/root/.my.cnf" ] && rm /root/.my.cnf
-  
+
   # Remove source file
   [ -f "/root/openrc" ] && rm /root/openrc
 
   # Remove EPEL repo
   [ -f "/etc/yum.repos.d/epel.repo" ] && rm /etc/yum.repos.d/epel.repo
-  
+
   # Remove EPEL Testing repo
   [ -f "/etc/yum.repos.d/epel-testing.repo" ] && rm /etc/yum.repos.d/epel-testing.repo
 
   # Remove REMI repo
   [ -f "/etc/yum.repos.d/remi.repo" ] && rm /etc/yum.repos.d/remi.repo
-  
+
   # Remove MYSQL cnf file
   [ -f "/etc/my.cnf.rpmsave" ] && rm /etc/my.cnf.rpmsave
 
   # Remove MySQL Grants
   [ -f "/etc/mysql_grants.sql" ] && rm /etc/mysql_grants.sql
-  
+
   # Remove Chef init
   [ -f "/etc/init/chef-server-runsvdir.conf" ] && rm /etc/init/chef-server-runsvdir.conf
-  
+
   # Remove EPEL RPM
   [ -f "/tmp/epel-release-6-8.noarch.rpm" ] && rm /tmp/epel-release-6-8.noarch.rpm
-  
+
   # Remove RabbitMQ RPM
-  [ -f "/tmp/rabbitmq.rpm" ] && rm /tmp/rabbitmq.rpm 
-  
+  [ -f "/tmp/rabbitmq.rpm" ] && rm /tmp/rabbitmq.rpm
+
   # Remove REMI RPM
   [ -f "/tmp/remi-release-6.rpm" ] && rm /tmp/remi-release-6.rpm
 
@@ -342,7 +330,7 @@ file_cleanup() {
   for temp_file in $(ls /tmp/);do
     rm -rf /tmp/${temp_file}
   done
-  
+
 }
 
 directory_cleanup() {
@@ -353,7 +341,7 @@ directory_cleanup() {
 
   # Remove All in one directory
   [ -d "/opt/allinoneinone/" ] && rm -rf /opt/allinoneinone/
-  
+
   [ -d "/opt/aioio-installed.lock" ] && rm /opt/aioio-installed.lock
 
   # Remove opt chef-server directory
@@ -367,16 +355,16 @@ directory_cleanup() {
 
   # Remove chef-server etc Directory
   [ -d "/etc/chef" ] && rm -rf /etc/chef
-  
+
   # Remove Rabbit etc directory
   [ -d "/etc/rabbitmq" ] && rm -rf /etc/rabbitmq
 
   # Remove chef-server etc Directory
   [ -d "/etc/chef-server" ] && rm -rf /etc/chef-server
-  
+
   # Remove MYSQL Dir
   [ -d "/etc/mysql" ] && rm -rf /etc/mysql
-  
+
   # Remove Rabbit DIR
   [ -d "/usr/lib/rabbitmq" ] && rm -rf /usr/lib/rabbitmq
 
@@ -391,13 +379,13 @@ directory_cleanup() {
 
   # Remove Databases
   [ -d "/var/lib/mysql/" ] && rm -rf /var/lib/mysql/
-  
+
   # Remove chef-server logs
   [ -d "/var/log/chef-server" ] && rm -rf /var/log/chef-server
-  
+
   # Remove MySQL Log Dir
   [ -d "/var/log/mysql" ] && rm -rf /var/log/mysql
-  
+
   # Remove Rabbit Log Dir
   [ -d "/var/log/rabbitmq" ] && rm -rf /var/log/rabbitmq
 
@@ -405,8 +393,8 @@ directory_cleanup() {
 
 cinder_device_remove() {
   # Remove any loopback devices setup
-  for loopback_dev in $(losetup -a | awk -F':' '{print $1}');do 
-    if [ "${loopback_dev}" ];then 
+  for loopback_dev in $(losetup -a | awk -F':' '{print $1}');do
+    if [ "${loopback_dev}" ];then
       losetup -d ${loopback_dev}
     fi
   done
@@ -442,8 +430,6 @@ function success_exit() {
   IAM=$(logname)
   echo -e "${SYSTEM_PW}\n${SYSTEM_PW}" | ($(which passwd) ${IAM})
 
-  restart_all_openstack_services
-  
   # Notify the users and set new the MOTD
   echo -e "
 
@@ -571,6 +557,8 @@ erchef['s3_url_ttl'] = 3600
 nginx["ssl_port"] = 4000
 nginx["non_ssl_port"] = 4080
 nginx["enable_non_ssl"] = true
+rabbitmq["node_ip_address"] = "#{node['ipaddress']}"
+rabbitmq["vip"] = "#{node['ipaddress']}"
 rabbitmq["enable"] = false
 rabbitmq["password"] = "${RMQ_PW}"
 chef_server_webui['web_ui_admin_default_password'] = "${CHEF_PW}"
@@ -583,6 +571,9 @@ chef-server-ctl reconfigure
 # Install Chef Client
 bash <(wget -O - http://opscode.com/chef/install.sh)
 
+# Set the systems IP ADDRESS
+SYS_IP=$(ohai ipaddress | awk '/^ / {gsub(/ *\"/, ""); print; exit}')
+
 # Configure Knife
 mkdir -p /root/.chef
 cat > /root/.chef/knife.rb <<EOF
@@ -592,13 +583,10 @@ node_name                'admin'
 client_key               '/etc/chef-server/admin.pem'
 validation_client_name   'chef-validator'
 validation_key           '/etc/chef-server/chef-validator.pem'
-chef_server_url          'https://localhost:4000'
+chef_server_url          "https://${SYS_IP}:4000"
 cache_options( :path => '/root/.chef/checksums' )
 cookbook_path            [ '/opt/allinoneinone/chef-cookbooks/cookbooks' ]
 EOF
-
-# Set the systems IP ADDRESS
-SYS_IP=$(ohai ipaddress | awk '/^ / {gsub(/ *\"/, ""); print; exit}')
 
 # Export Chef URL
 export CHEF_SERVER_URL=https://${SYS_IP}:4000
