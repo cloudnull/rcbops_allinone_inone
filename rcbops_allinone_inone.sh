@@ -593,10 +593,11 @@ export CHEF_SERVER_URL=https://${SYS_IP}:4000
 
 # Get RcbOps Cookbooks
 mkdir -p /opt/allinoneinone
-git clone git://github.com/rcbops/chef-cookbooks.git /opt/allinoneinone/chef-cookbooks
+git clone https://github.com/rcbops/chef-cookbooks.git /opt/allinoneinone/chef-cookbooks
 pushd /opt/allinoneinone/chef-cookbooks
-git submodule init
 git checkout ${COOKBOOK_VERSION}
+git submodule init
+git submodule sync
 git submodule update
 
 # Get add-on Cookbooks
