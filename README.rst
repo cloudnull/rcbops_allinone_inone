@@ -127,8 +127,8 @@ Disable roll back on Failure (NOTICE LETTER CASE)
 ========
 
 
-Here is how you can get Started.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Here is how you can get Started
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 1. Provision Server with a minimum of 2GB of ram and 10GB of hard disk space.
@@ -138,12 +138,11 @@ Here is how you can get Started.
 
     curl https://raw.github.com/cloudnull/rcbops_allinone_inone/master/rcbops_allinone_inone.sh | bash
 
-
 5. Go to the IP address of your server, login to Horizon, have fun with Openstack.
 
 
 NOTICE: I WOULD NOT RECOMMEND USING THIS IN PRODUCTION!
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 License:
@@ -159,3 +158,4 @@ License:
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   See the License for the specific language governing permissions and
   limitations under the License.
+
