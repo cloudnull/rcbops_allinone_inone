@@ -750,7 +750,7 @@ env = {'chef_type': 'environment',
 
 if ${NEUTRON_ENABLED} is True:
     neutron_interface = "${NEUTRON_INTERFACE}"
-    env['override_attributes']["${NEUTRON_NAME}"].update({
+    env['override_attributes']["${NEUTRON_NAME}"] = {
         "ovs": {
             "network_type": "gre",
             "provider_networks": [
@@ -761,7 +761,7 @@ if ${NEUTRON_ENABLED} is True:
                 }
             ]
         }
-    })
+    }
 
     env['override_attributes']['nova']['network'].update({
         "provider": "${NEUTRON_NAME}"
