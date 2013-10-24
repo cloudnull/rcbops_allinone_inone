@@ -79,6 +79,9 @@ The script has a bunch of override variables that can be set in script or as env
 Set this to override the RCBOPS Developer Mode, DEFAULT is False:
   DEVELOPER_MODE=True or False
 
+Set this to Enable or Disable Package Upgrades, DEFAULT is False
+  DO_PACKAGE_UPGRADES=True or False
+  
 Set this to override the chef default password, DEFAULT is "Random Things":
   CHEF_PW=""
 

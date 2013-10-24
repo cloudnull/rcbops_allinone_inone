@@ -49,6 +49,9 @@ set -u
 # Set this to override the RCBOPS Developer Mode, DEFAULT is False
 # DEVELOPER_MODE=True || False
 
+# Set this to allow the cook to do package upgrades
+# DO_PACKAGE_UPGRADES=True || False
+
 # Set this to override the chef default password, DEFAULT is "Random Things"
 # CHEF_PW=""
 
@@ -171,11 +174,16 @@ function rabbit_setup() {
 # Package Install
 # ==========================================================================
 function install_apt_packages() {
+  # Install RabbitMQ Repo
+  RABBITMQ="http://www.rabbitmq.com/rabbitmq-signing-key-public.asc"
+  wget -O /tmp/rabbitmq.asc ${RABBITMQ}
+  apt-key add /tmp/rabbitmq.asc
+
   # Update System
   apt-get update && apt-get -y upgrade
 
   # Install Packages
-  apt-get install -y rabbitmq-server git curl lvm2
+  apt-get install -y git curl lvm2 rabbitmq-server
 
   # Setup shared RabbitMQ
   rabbit_setup
@@ -210,7 +218,7 @@ function install_yum_packages() {
   yum -y install erlang
 
   # Install RabbitMQ
-  RABBITMQ="http://www.rabbitmq.com/releases/rabbitmq-server/v2.8.7/rabbitmq-server-2.8.7-1.noarch.rpm"
+  RABBITMQ="http://www.rabbitmq.com/releases/rabbitmq-server/v3.2.0/rabbitmq-server-3.2.0-1.noarch.rpm"
   wget -O /tmp/rabbitmq.rpm ${RABBITMQ}
   rpm --import http://www.rabbitmq.com/rabbitmq-signing-key-public.asc
   rpm -Uvh /tmp/rabbitmq.rpm
@@ -319,6 +327,9 @@ file_cleanup() {
 
   # Remove RabbitMQ RPM
   [ -f "/tmp/rabbitmq.rpm" ] && rm /tmp/rabbitmq.rpm
+  
+  # Remove RabbitMQ asc
+  [ -f "/tmp/rabbitmq.asc" ] && rm /tmp/rabbitmq.asc
 
   # Remove REMI RPM
   [ -f "/tmp/remi-release-6.rpm" ] && rm /tmp/remi-release-6.rpm
@@ -473,8 +484,11 @@ Here are the details:
 Username : ${IAM}
 Password : ${SYSTEM_PW}
 
-
 ** Please make a note of this! **
+
+
+
+*** While not required or necessary, you may want to reboot your AIO server ***
 "
 
   # Exit Zero
@@ -505,6 +519,12 @@ if [ ! -f "/root/.ssh/id_rsa" ];then
     cat id_rsa.pub | tee -a authorized_keys
     popd
 fi
+
+# Enable || Disable Developer Mode
+DEVELOPER_MODE=${DEVELOPER_MODE:-False}
+
+# Enable || Disable Package Upgrades
+DO_PACKAGE_UPGRADES=${DO_PACKAGE_UPGRADES:-True}
 
 # List of all Services
 OPENSTACK_SERVICES="cinder glance nova keystone ceilometer heat horizon "
@@ -652,6 +672,7 @@ env = {'chef_type': 'environment',
   'name': 'allinoneinone',
   'override_attributes': {
     'developer_mode': ${DEVELOPER_MODE:-False},
+    'do_package_upgrades': ${DO_PACKAGE_UPGRADES:-True},
     'rabbitmq': {
       'erlang_cookie': "${CHEF_COOKIE}"
     },
