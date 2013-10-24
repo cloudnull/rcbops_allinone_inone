@@ -431,6 +431,35 @@ service_stop() {
 
 }
 
+
+# Neutron Setup 
+# ==========================================================================
+function neutron_setup() {
+  # Add in some Kernel Options
+  if [ -f "/etc/sysctl.conf" ];then
+    if [ "$(sysctl -a | awk -F'\ =\ ' '/net.ipv4.ip_forward/ {print $2}')" == "0" ];then
+      sysctl net.ipv4.ip_forward=1 | tee -a /etc/sysctl.conf
+    fi
+
+    if [ ! "$(sysctl -a | awk -F'\ =\ ' '/net.ipv4.conf.all.rp_filter/ {print $2}')" == "0" ];then
+      sysctl net.ipv4.conf.all.rp_filter=0 | tee -a /etc/sysctl.conf
+    fi
+
+    if [ ! "$(sysctl -a | awk -F'\ =\ ' '/net.ipv4.conf.default.rp_filter/ {print $2}')" == "0" ];then
+      sysctl net.ipv4.conf.default.rp_filter=0 | tee -a /etc/sysctl.conf
+    fi
+  fi
+
+  # Restart Networking
+  service network restart
+  
+  # Configure OVS
+  ovs-vsctl add-port br-eth1 eth1
+}
+
+
+# Success Message
+# ==========================================================================
 function success_exit() {
   set +v
 
@@ -622,7 +651,6 @@ git submodule update
 
 # Get add-on Cookbooks
 knife cookbook site download -f /tmp/cron.tar.gz cron 1.2.6 && tar xf /tmp/cron.tar.gz -C /opt/allinoneinone/chef-cookbooks/cookbooks
-
 knife cookbook site download -f /tmp/chef-client.tar.gz chef-client 3.0.6 && tar xf /tmp/chef-client.tar.gz -C /opt/allinoneinone/chef-cookbooks/cookbooks
 
 # Upload all of the RCBOPS Cookbooks
@@ -749,6 +777,10 @@ env = {'chef_type': 'environment',
 }
 
 if ${NEUTRON_ENABLED} is True:
+    env['override_attributes']['nova']['network'].update({
+        "provider": "${NEUTRON_NAME}"
+    })
+
     neutron_interface = "${NEUTRON_INTERFACE}"
     env['override_attributes']["${NEUTRON_NAME}"] = {
         "ovs": {
@@ -762,12 +794,6 @@ if ${NEUTRON_ENABLED} is True:
             ]
         }
     }
-
-    env['override_attributes']['nova']['network'].update({
-        "provider": "${NEUTRON_NAME}"
-    })
-
-
 else:
     env['override_attributes']['nova']['network'].update({
         'multi_host': True,
@@ -865,4 +891,9 @@ if [ -f "/etc/pam.d/sshd" ];then
   sed -i '/pam_motd.so/ s/^/#\ /' /etc/pam.d/sshd
 fi
 
+# Setup Neutron
+if [ "${NEUTRON_ENABLED}" == True ];then
+  neutron_setup
+fi
+  
 success_exit
