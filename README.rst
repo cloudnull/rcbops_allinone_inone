@@ -20,6 +20,8 @@ This is a VERY simple script but does allow for some control into the setup and 
 
 This script is presently using the v4.1.2 TAG by default from the rcbops-cookbooks repo : (https://github.com/rcbops/chef-cookbooks). See the **Configuration Options** section on available options if you would like to try a different version of the Rackspace Private Cloud Software.
 
+This script assumes you will have at least 2 networks installed on the AIO instance. **IE you should have setup eth0 and eth1.**. If you are not sure, run `ip a` to see what networks you have on your proposed AIO instance.
+
 
 This script works with Ubuntu 12.04 and CentOS6/RHEL6
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
