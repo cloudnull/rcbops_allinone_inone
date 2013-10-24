@@ -327,7 +327,7 @@ file_cleanup() {
 
   # Remove RabbitMQ RPM
   [ -f "/tmp/rabbitmq.rpm" ] && rm /tmp/rabbitmq.rpm
-  
+
   # Remove RabbitMQ asc
   [ -f "/tmp/rabbitmq.asc" ] && rm /tmp/rabbitmq.asc
 
@@ -432,7 +432,7 @@ service_stop() {
 }
 
 
-# Neutron Setup 
+# Neutron Setup
 # ==========================================================================
 function neutron_setup() {
   # Add in some Kernel Options
@@ -452,7 +452,7 @@ function neutron_setup() {
 
   # Restart Networking
   service network restart
-  
+
   # Configure OVS
   ovs-vsctl add-port br-eth1 eth1
 }
@@ -467,7 +467,7 @@ function success_exit() {
   echo "AIOIO INSTALLATION COMPLETED: $(date +%y%m%d%H%M)" | tee /opt/aioio-installed.lock
 
   # Reset users Password post installation
-  IAM=$(logname)
+  IAM=$(whoami)
   echo -e "${SYSTEM_PW}\n${SYSTEM_PW}" | ($(which passwd) ${IAM})
 
   # Notify the users and set new the MOTD
@@ -895,5 +895,5 @@ fi
 if [ "${NEUTRON_ENABLED}" == True ];then
   neutron_setup
 fi
-  
+
 success_exit
