@@ -218,7 +218,7 @@ function install_yum_packages() {
   yum -y install erlang
 
   # Install RabbitMQ
-  RABBITMQ="http://www.rabbitmq.com/releases/rabbitmq-server/v3.2.0/rabbitmq-server-3.2.0-1.noarch.rpm"
+  RABBITMQ="http://www.rabbitmq.com/releases/rabbitmq-server/v3.1.5/rabbitmq-server-3.1.5-1.noarch.rpm"
   wget -O /tmp/rabbitmq.rpm ${RABBITMQ}
   rpm --import http://www.rabbitmq.com/rabbitmq-signing-key-public.asc
   rpm -Uvh /tmp/rabbitmq.rpm
