@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Setup a master dev environment
 export COOKBOOK_VERSION="master"
 
