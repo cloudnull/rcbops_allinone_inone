@@ -471,10 +471,11 @@ function boot_strap_node() {
 
   while [ $? -ne 0 -a ${RETRY} -lt ${MAX_RETRIES} ];do
     # Begin Cooking
+    RETRY=$((${RETRY}+1))
     knife bootstrap localhost -E allinoneinone -r ${RUN_LIST}
   done
 
-  if [ $i -eq ${MAX_RETRIES} ];then
+  if [ ${RETRY} -eq ${MAX_RETRIES} ];then
     error_exit "Hit maximum number of retries, giving up..."
   fi
   set -e
