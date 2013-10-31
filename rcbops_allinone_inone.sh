@@ -103,6 +103,7 @@ set -u
 # ==========================================================================
 # Default Images True||False, DEFAULT is False
 # FEDORA_IMAGE=False
+
 # UBUNTU_IMAGE=False
 
 # Package Removal
@@ -183,11 +184,8 @@ function install_apt_packages() {
   wget -O /tmp/rabbitmq.asc ${RABBITMQ}
   apt-key add /tmp/rabbitmq.asc
 
-  # Update System
-  apt-get update && apt-get -y upgrade
-
   # Install Packages
-  apt-get install -y git curl lvm2 rabbitmq-server
+  apt-get update && apt-get install -y git curl lvm2 rabbitmq-server
 
   # Setup shared RabbitMQ
   rabbit_setup
