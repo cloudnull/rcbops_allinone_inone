@@ -458,6 +458,25 @@ function neutron_setup() {
 }
 
 
+# Run Chef Bootstrap
+# ==========================================================================
+function boot_strap_node() {
+  set +e
+  MAX_RETRIES=${MAX_RETRIES:-5}
+  RETRY=0
+
+  while [ $? -ne 0 -a ${RETRY} -lt ${MAX_RETRIES} ];do
+    # Begin Cooking
+    knife bootstrap localhost -E allinoneinone -r ${RUN_LIST}
+  done
+
+  if [ $i -eq ${MAX_RETRIES} ];then
+    error_exit "Hit maximum number of retries, giving up..."
+  fi
+  set -e
+}
+
+
 # Success Message
 # ==========================================================================
 function success_exit() {
@@ -741,6 +760,7 @@ env = {'chef_type': 'environment',
     },
     'mysql': {
       'allow_remote_root': True,
+      "bind_address": "0.0.0.0",
       'root_network_acl': '%',
       'tunable': {
         'log_queries_not_using_index': False
@@ -851,9 +871,9 @@ else
     echo -e 'LOOP=$(losetup -f)\nCINDER="/opt/cinder.img"\nlosetup ${LOOP} ${CINDER}' | tee /etc/rc.local
 fi
 
-# Begin Cooking
-knife bootstrap localhost -E allinoneinone -r ${RUN_LIST}
-
+# Run Chef Bootstrap
+boot_strap_node
+  
 # go to root home
 pushd /root
 
@@ -897,3 +917,4 @@ if [ "${NEUTRON_ENABLED}" == True ];then
 fi
 
 success_exit
+
