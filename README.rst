@@ -129,6 +129,10 @@ Override the runlist with something different
 Disable roll back on Failure (NOTICE LETTER CASE)
   DISABLE_ROLL_BACK=true or false
 
+Default Images True||False, DEFAULT is False
+  FEDORA_IMAGE=False
+  UBUNTU_IMAGE=False
+  
 ========
 
 

@@ -100,6 +100,10 @@ set -u
 # Override the runlist with something different
 # RUN_LIST=""
 
+# ==========================================================================
+# Default Images True||False, DEFAULT is False
+# FEDORA_IMAGE=False
+# UBUNTU_IMAGE=False
 
 # Package Removal
 # ==========================================================================
@@ -612,6 +616,10 @@ NEUTRON_NAME=${NEUTRON_NAME:-"quantum"}
 
 RUN_LIST=${RUN_LIST:-"role[allinone],role[cinder-all]"}
 
+# Default Images
+UBUNTU_IMAGE=${UBUNTU_IMAGE:-False}
+FEDORA_IMAGE=${FEDORA_IMAGE:-False}
+
 # Install Packages
 ${PACKAGE_INSTALL}
 
@@ -726,9 +734,7 @@ env = {'chef_type': 'environment',
     'enable_monit': True,
     'glance': {
         'image': {
-            'cirros': cirros_img_url,
-            'precise': ubuntu_img_url,
-            'fedora': fedora_img_url
+            'cirros': cirros_img_url
         },
       'image_upload': True,
       'images': [
@@ -842,6 +848,12 @@ else:
           'num_networks': '1'
         }
     })
+
+if ${UBUNTU_IMAGE} is True:
+    env['override_attributes']['glance']['image']['ubuntu'] = ubuntu_img_url
+
+if ${FEDORA_IMAGE} is True:
+    env['override_attributes']['glance']['image']['fedora'] = fedora_img_url
 
 with open('allinoneinone.json', 'wb') as rcbops:
     rcbops.write(json.dumps(env, indent=2))
