@@ -466,8 +466,12 @@ function neutron_setup() {
 # ==========================================================================
 function boot_strap_node() {
   set +e
+
   MAX_RETRIES=${MAX_RETRIES:-5}
   RETRY=0
+
+  # Set the initial return value to failure
+  false
 
   while [ $? -ne 0 -a ${RETRY} -lt ${MAX_RETRIES} ];do
     # Begin Cooking
@@ -478,6 +482,7 @@ function boot_strap_node() {
   if [ ${RETRY} -eq ${MAX_RETRIES} ];then
     error_exit "Hit maximum number of retries, giving up..."
   fi
+
   set -e
 }
 
