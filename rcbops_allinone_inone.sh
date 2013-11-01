@@ -458,9 +458,6 @@ function neutron_setup() {
     fi
   fi
 
-  # Restart Networking
-  service network restart
-
   # Configure OVS
   ovs-vsctl add-port br-eth1 eth1
   
@@ -756,9 +753,7 @@ env = {'chef_type': 'environment',
         },
       'image_upload': True,
       'images': [
-        'cirros',
-        'precise',
-        'fedora'
+        'cirros'
       ]
     },
     'keystone': {
@@ -869,9 +864,13 @@ else:
 
 if ${UBUNTU_IMAGE} is True:
     env['override_attributes']['glance']['image']['ubuntu'] = ubuntu_img_url
+    env['override_attributes']['glance']['images'].append('precise')
+        
 
 if ${FEDORA_IMAGE} is True:
     env['override_attributes']['glance']['image']['fedora'] = fedora_img_url
+    env['override_attributes']['glance']['images'].append('fedora')
+
 
 with open('allinoneinone.json', 'wb') as rcbops:
     rcbops.write(json.dumps(env, indent=2))
