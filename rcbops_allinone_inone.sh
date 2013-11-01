@@ -457,6 +457,10 @@ function neutron_setup() {
 
   # Configure OVS
   ovs-vsctl add-port br-eth1 eth1
+  
+  # Make our networks
+  ${NEUTRON_NAME} net-create --provider:physical_network=ph-eth1 --provider:network_type=flat ${NEUTRON_NETWORK_NAME}
+  ${NEUTRON_NAME} subnet-create --name range-one ${NEUTRON_NETWORK_NAME} 172.16.0.0/16
 }
 
 
@@ -613,11 +617,15 @@ CINDER=${CINDER:-"/opt/cinder.img"}
 NEUTRON_ENABLED=${NEUTRON_ENABLED:-False}
 
 # Set the Interface
-NEUTRON_INTERFACE=${NEUTRON_INTERFACE:-None}
+NEUTRON_INTERFACE=${NEUTRON_INTERFACE:-eth1}
 
 # Set the Name of the Neutron Service
 NEUTRON_NAME=${NEUTRON_NAME:-"quantum"}
 
+# Set network name
+NEUTRON_NETWORK_NAME=${NEUTRON_NETWORK_NAME:-"aioionet"}
+
+# Set the default Run list
 RUN_LIST=${RUN_LIST:-"role[allinone],role[cinder-all]"}
 
 # Default Images
@@ -928,7 +936,7 @@ if [ -f "/etc/pam.d/sshd" ];then
 fi
 
 # Setup Neutron
-if [ "${NEUTRON_ENABLED}" == True ];then
+if [ "${NEUTRON_ENABLED}" == "True" ];then
   neutron_setup
 fi
 
