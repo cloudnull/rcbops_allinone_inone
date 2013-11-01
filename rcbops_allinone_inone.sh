@@ -335,6 +335,9 @@ file_cleanup() {
 
   # Remove REMI RPM
   [ -f "/tmp/remi-release-6.rpm" ] && rm /tmp/remi-release-6.rpm
+  
+  # Remove temp mods
+  [ -f "/tmp/mods.txt" ] && rm /tmp/mods.txt
 
   # Remove MySQL log file
   [ -f "/var/log/mysqld.log.rpmsave" ] && rm /var/log/mysqld.log.rpmsave
@@ -438,16 +441,19 @@ service_stop() {
 # ==========================================================================
 function neutron_setup() {
   # Add in some Kernel Options
+  MODS="/tmp/mods.txt"
+  sysctl -a | sed 's/\ //g' | tee ${MODS}
+    
   if [ -f "/etc/sysctl.conf" ];then
-    if [ "$(sysctl -a | awk -F'\ =\ ' '/net.ipv4.ip_forward/ {print $2}')" == "0" ];then
+    if [ "$(awk -F'=' '/net.ipv4.ip_forward/ {print $2}' ${MODS})" == "0" ];then
       sysctl net.ipv4.ip_forward=1 | tee -a /etc/sysctl.conf
     fi
 
-    if [ ! "$(sysctl -a | awk -F'\ =\ ' '/net.ipv4.conf.all.rp_filter/ {print $2}')" == "0" ];then
+    if [ ! "$(awk -F'=' '/net.ipv4.conf.all.rp_filter/ {print $2}' ${MODS})" == "0" ];then
       sysctl net.ipv4.conf.all.rp_filter=0 | tee -a /etc/sysctl.conf
     fi
 
-    if [ ! "$(sysctl -a | awk -F'\ =\ ' '/net.ipv4.conf.default.rp_filter/ {print $2}')" == "0" ];then
+    if [ ! "$(awk -F'=' '/net.ipv4.conf.default.rp_filter/ {print $2}' ${MODS})" == "0" ];then
       sysctl net.ipv4.conf.default.rp_filter=0 | tee -a /etc/sysctl.conf
     fi
   fi
