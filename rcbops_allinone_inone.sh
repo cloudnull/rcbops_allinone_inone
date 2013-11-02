@@ -459,11 +459,18 @@ function neutron_setup() {
   fi
 
   # Configure OVS
-  ovs-vsctl add-port br-eth1 eth1
+  ovs-vsctl add-port br-${NEUTRON_INTERFACE} ${NEUTRON_INTERFACE}
   
   # Make our networks
-  ${NEUTRON_NAME} net-create --provider:physical_network=ph-eth1 --provider:network_type=flat ${NEUTRON_NETWORK_NAME}
-  ${NEUTRON_NAME} subnet-create --name range-one ${NEUTRON_NETWORK_NAME} 172.16.0.0/16
+  ${NEUTRON_NAME} net-create --provider:physical_network=ph-${NEUTRON_INTERFACE} \
+                             --provider:network_type=flat ${NEUTRON_NETWORK_NAME}
+
+  # Make our subnets
+  ${NEUTRON_NAME} subnet-create ${NEUTRON_NETWORK_NAME} 172.16.0.0/16 --name ${NEUTRON_NETWORK_NAME}_subnet \
+                                                                      --no-gateway \
+                                                                      --host-route destination=0.0.0.0/0,nexthop=172.16.0.1 \
+                                                                      --allocation-pool start=172.16.0.100,end=172.16.0.200 \
+                                                                      --dns-nameservers list=true 8.8.8.8 8.8.8.7
 }
 
 
@@ -773,6 +780,19 @@ env = {'chef_type': 'environment',
         }
       }
     },
+    'heat': {
+      "services": {
+        "cloudwatch_api": {
+          "workers": 2,
+        },
+        "cfn_api": {
+          "workers": 2,
+        },
+        "base_api": {
+          "workers": 2,
+        }
+      }
+    },
     'monitoring': {
       'metric_provider': 'collectd',
       'procmon_provider': 'monit'
@@ -847,16 +867,6 @@ else:
           'dns2': '8.8.4.4',
           'ipv4_cidr': '172.16.0.0/16',
           'label': 'public',
-          'network_size': '255',
-          'num_networks': '1'
-        },
-        'private': {
-          'bridge': 'br1',
-          'bridge_dev': 'eth1',
-          'dns1': '8.8.8.8',
-          'dns2': '8.8.4.4',
-          'ipv4_cidr': '192.168.0.0/24',
-          'label': 'private',
           'network_size': '255',
           'num_networks': '1'
         }
