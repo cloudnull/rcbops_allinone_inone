@@ -18,4 +18,4 @@ export RMQ_PW="secrete"
 export CHEF_PW="secrete"
 
 # Set an override for my roles
-export RUN_LIST="role[allinone],role[single-network-node],role[cinder-all],role[heat-all],role[ceilometer-all]"
+export RUN_LIST="role[allinone],role[single-network-node],role[cinder-all]"
