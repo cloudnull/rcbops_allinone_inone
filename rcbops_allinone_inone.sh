@@ -841,7 +841,7 @@ if ${NEUTRON_ENABLED} is True:
     })
 
     neutron_interface = "${NEUTRON_INTERFACE}"
-    env['override_attributes']["${NEUTRON_NAME}"] = {
+    net_attrs = env['override_attributes']["${NEUTRON_NAME}"] = {
         "ovs": {
             "network_type": "gre",
             "provider_networks": [
@@ -853,6 +853,7 @@ if ${NEUTRON_ENABLED} is True:
             ]
         }
     }
+    net_attrs['metadata_network'] = "True"
 else:
     env['override_attributes']['nova']['network'].update({
         'multi_host': True,
