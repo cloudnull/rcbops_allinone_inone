@@ -458,17 +458,17 @@ function neutron_setup() {
     fi
   fi
 
-# Make our networks
-${NEUTRON_NAME} net-create --provider:physical_network=ph-${NEUTRON_INTERFACE} \
-                            --provider:network_type=flat \
-                            --shared ${NEUTRON_NETWORK_NAME}
+  # Make our networks
+  ${NEUTRON_NAME} net-create --provider:physical_network=ph-${NEUTRON_INTERFACE} \
+                             --provider:network_type=flat \
+                             --shared ${NEUTRON_NETWORK_NAME}
 
-# Make our subnets
-${NEUTRON_NAME} subnet-create ${NEUTRON_NETWORK_NAME} 172.16.0.0/16 --name ${NEUTRON_NETWORK_NAME}_subnet \
-                                                                    --no-gateway \
-                                                                    --host-route destination=0.0.0.0/0,nexthop=172.16.0.1 \
-                                                                    --allocation-pool start=172.16.0.100,end=172.16.0.200 \
-                                                                    --dns-nameservers list=true 8.8.8.8 8.8.8.7
+  # Make our subnets
+  ${NEUTRON_NAME} subnet-create ${NEUTRON_NETWORK_NAME} 172.16.0.0/16 --name ${NEUTRON_NETWORK_NAME}_subnet \
+                                                                      --no-gateway \
+                                                                      --host-route destination=0.0.0.0/0,nexthop=172.16.0.1 \
+                                                                      --allocation-pool start=172.16.0.100,end=172.16.0.200 \
+                                                                      --dns-nameservers list=true 8.8.8.8 8.8.8.7
 
   # Configure OVS
   ovs-vsctl add-port br-${NEUTRON_INTERFACE} ${NEUTRON_INTERFACE}
@@ -480,14 +480,14 @@ ${NEUTRON_NAME} subnet-create ${NEUTRON_NETWORK_NAME} 172.16.0.0/16 --name ${NEU
 function flavor_setup() {
   # Delete all of the m1 flavors
   for FLAVOR in $(nova flavor-list | awk '/m1/ {print $2}');do 
-    nova flavor-delete ${flavor}
+    nova flavor-delete ${FLAVOR}
   done
-  
+
   # Create a new Standard Flavor
   nova flavor-create "512MB Standard Instance" 1 512 5 1 --ephemeral 0 \
-                                                         --swap 0 \
-                                                         --rxtx-factor 1 \
-                                                         --is-public True
+                                                          --swap 0 \
+                                                          --rxtx-factor 1 \
+                                                          --is-public True
 }
 
 
@@ -976,5 +976,6 @@ fi
 # Setup a new flavor
 flavor_setup
 
+# GREAT SUCCESS!
 success_exit
 
