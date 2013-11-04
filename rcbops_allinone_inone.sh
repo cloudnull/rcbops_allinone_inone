@@ -464,14 +464,26 @@ function neutron_setup() {
                              --shared ${NEUTRON_NETWORK_NAME}
 
   # Make our subnets
-  ${NEUTRON_NAME} subnet-create ${NEUTRON_NETWORK_NAME} 172.16.0.0/16 --name ${NEUTRON_NETWORK_NAME}_subnet \
-                                                                      --no-gateway \
-                                                                      --host-route destination=0.0.0.0/0,nexthop=172.16.0.1 \
-                                                                      --allocation-pool start=172.16.0.100,end=172.16.0.200 \
-                                                                      --dns-nameservers list=true 8.8.8.8 8.8.8.7
+  ${NEUTRON_NAME} subnet-create ${NEUTRON_NETWORK_NAME} \
+                                172.16.0.0/16 \
+                                --name ${NEUTRON_NETWORK_NAME}_subnet \
+                                --no-gateway \
+                                --host-route destination=0.0.0.0/0,nexthop=172.16.0.1 \
+                                --allocation-pool start=172.16.0.100,end=172.16.0.200 \
+                                --dns-nameservers list=true 8.8.8.8 8.8.8.7
 
   # Configure OVS
   ovs-vsctl add-port br-${NEUTRON_INTERFACE} ${NEUTRON_INTERFACE}
+  
+  # Add Default Ping Security Group
+  neutron security-group-rule-create --protocol icmp --direction ingress default
+
+  # Add Default SSH Security Group
+  neutron security-group-rule-create --protocol tcp \
+                                     --port-range-min 22 \
+                                     --port-range-max 22 \
+                                     --direction ingress \
+                                     default
 }
 
 
@@ -485,7 +497,7 @@ function flavor_setup() {
 
   # Create a new Standard Flavor
   nova flavor-create "512MB Standard Instance" 1 512 5 1 --ephemeral 0 \
-                                                          --swap 0 \
+                                                          --swap 512 \
                                                           --rxtx-factor 1 \
                                                           --is-public True
 }
