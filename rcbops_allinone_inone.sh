@@ -91,7 +91,7 @@ set -u
 # NEUTRON_INTERFACE=""
 
 # Set the name of the Service
-# NEUTRON_NAME="quantum"
+# NEUTRON_NAME="neutron"
 # ==========================================================================
 
 # Chef Server Override for Package URL
@@ -105,6 +105,8 @@ set -u
 # FEDORA_IMAGE=False
 
 # UBUNTU_IMAGE=False
+
+# CIRROS_IMAGE=False
 
 # Package Removal
 # ==========================================================================
@@ -484,6 +486,16 @@ function neutron_setup() {
                                      --port-range-max 22 \
                                      --direction ingress \
                                      default
+
+  # Add notice to bash login
+  echo -e "
+echo \"Remember! That this system is using Neutron Setup. To gain access to an 
+instance via the command line you MUST execute commands within in the namespace. 
+Example, 'ip netns exec NAME_SPACE_ID bash'. 
+This will give you shell access to the specific namespace's routing table
+
+Execute 'ip netns' for a full list of all network namespsaces on this Server.
+\"" | tee -a ~/.bashrc
 }
 
 
@@ -670,6 +682,7 @@ RUN_LIST=${RUN_LIST:-"role[allinone],role[cinder-all]"}
 # Default Images
 UBUNTU_IMAGE=${UBUNTU_IMAGE:-False}
 FEDORA_IMAGE=${FEDORA_IMAGE:-False}
+CIRROS_IMAGE=${CIRROS_IMAGE:-False}
 
 # Install Packages
 ${PACKAGE_INSTALL}
@@ -784,13 +797,9 @@ env = {'chef_type': 'environment',
     },
     'enable_monit': True,
     'glance': {
-        'image': {
-            'cirros': cirros_img_url
-        },
+        'image': {},
       'image_upload': True,
-      'images': [
-        'cirros'
-      ]
+      'images': []
     },
     'keystone': {
       'admin_user': 'admin',
@@ -911,6 +920,10 @@ if ${FEDORA_IMAGE} is True:
     env['override_attributes']['glance']['image']['fedora'] = fedora_img_url
     env['override_attributes']['glance']['images'].append('fedora')
 
+    
+if ${CIRROS_IMAGE} is True:
+    env['override_attributes']['glance']['image']['cirros'] = cirros_img_url
+    env['override_attributes']['glance']['images'].append('cirros')
 
 with open('allinoneinone.json', 'wb') as rcbops:
     rcbops.write(json.dumps(env, indent=2))
@@ -947,7 +960,7 @@ boot_strap_node
 pushd /root
 
 # Source the Creds
-source openrc
+source ~/openrc
 
 # Add a default Key
 nova keypair-add adminKey --pub-key /root/.ssh/id_rsa.pub
@@ -956,7 +969,7 @@ nova keypair-add adminKey --pub-key /root/.ssh/id_rsa.pub
 nova volume-type-create TestVolType
 
 # Add creds to default env
-echo "source openrc" | tee -a .bashrc
+echo "source ~/openrc" | tee -a .bashrc
 echo "export EDITOR=vim" | tee -a .bashrc
 
 # Exit Root Dir
@@ -990,4 +1003,3 @@ flavor_setup
 
 # GREAT SUCCESS!
 success_exit
-
