@@ -913,7 +913,7 @@ else:
 
 if ${UBUNTU_IMAGE} is True:
     env['override_attributes']['glance']['image']['ubuntu'] = ubuntu_img_url
-    env['override_attributes']['glance']['images'].append('precise')
+    env['override_attributes']['glance']['images'].append('ubuntu')
         
 
 if ${FEDORA_IMAGE} is True:
