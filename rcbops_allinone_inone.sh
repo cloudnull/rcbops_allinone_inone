@@ -785,6 +785,11 @@ UBUNTU_IMAGE=${UBUNTU_IMAGE:-False}
 FEDORA_IMAGE=${FEDORA_IMAGE:-False}
 CIRROS_IMAGE=${CIRROS_IMAGE:-False}
 
+# Bind Interfaces
+MANAGEMENT_INTERFACE=${MANAGEMENT_INTERFACE:-lo}
+NOVA_INTERFACE=${NOVA_INTERFACE:-lo}
+PUBLIC_INTERFACE=${PUBLIC_INTERFACE:-eth0}
+
 # Bind Cidrs
 MANAGEMENT_INTERFACE_CIDR=${MANAGEMENT_INTERFACE_CIDR:-""}
 NOVA_INTERFACE_CIDR=${NOVA_INTERFACE_CIDR:-""}
@@ -798,6 +803,12 @@ ${PACKAGE_INSTALL}
 # Grab existing Chef Cookie
 CHEF_COOKIE=$(cat /var/lib/rabbitmq/.erlang.cookie)
 
+if [ "$(ip -f inet -o addr show ${MANAGEMENT_INTERFACE})" ];them
+  MANAGEMENT_IP=$(ip -f inet -o addr show ${MANAGEMENT_INTERFACE} | awk '{print $4}' | awk -F'/' '{print $1}')
+else
+  MANAGEMENT_IP='#{node["ipaddress"]}'
+fi
+
 # Configure Chef Vars
 mkdir -p /etc/chef-server
 cat > /etc/chef-server/chef-server.rb <<EOF
@@ -805,8 +816,8 @@ erchef['s3_url_ttl'] = 3600
 nginx["ssl_port"] = 4000
 nginx["non_ssl_port"] = 4080
 nginx["enable_non_ssl"] = true
-rabbitmq["node_ip_address"] = "#{node['ipaddress']}"
-rabbitmq["vip"] = "#{node['ipaddress']}"
+rabbitmq["node_ip_address"] = "${MANAGEMENT_IP}"
+rabbitmq["vip"] = "${MANAGEMENT_IP}"
 rabbitmq["enable"] = false
 rabbitmq["password"] = "${RMQ_PW}"
 chef_server_webui['web_ui_admin_default_password'] = "${CHEF_PW}"
@@ -884,17 +895,17 @@ def get_network(interface):
         return '127.0.0.0/8'
 
 if not "${MANAGEMENT_INTERFACE_CIDR}":
-    management_network = get_network(interface="${MANAGEMENT_INTERFACE:-eth0}")
+    management_network = get_network(interface="${MANAGEMENT_INTERFACE}")
 else:
     management_network = "${MANAGEMENT_INTERFACE_CIDR}"
 
 if not "${NOVA_INTERFACE_CIDR}":
-    nova_network = get_network(interface="${NOVA_INTERFACE:-eth0}")
+    nova_network = get_network(interface="${NOVA_INTERFACE}")
 else:
     nova_network = "${NOVA_INTERFACE_CIDR}"
 
 if not "${PUBLIC_INTERFACE_CIDR}":
-    public_network = get_network(interface="${PUBLIC_INTERFACE:-eth0}")
+    public_network = get_network(interface="${PUBLIC_INTERFACE}")
 else:
     public_network = "${PUBLIC_INTERFACE_CIDR}"
 

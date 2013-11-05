@@ -6,7 +6,7 @@ export COOKBOOK_VERSION="master"
 
 # Setup cidrs
 export NOVA_INTERFACE_CIDR="127.0.0.0/24"
-export MANAGEMENT_INTERFACE_CIDR="127.0.0.0/24"
+export MANAGEMENT_INTERFACE="lo"
 
 # Setup passwords
 export NOVA_PW="secrete"
