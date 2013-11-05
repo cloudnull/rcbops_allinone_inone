@@ -108,6 +108,16 @@ set -u
 
 # CIRROS_IMAGE=False
 
+# ==========================================================================
+# If not set, the script will attempt to determine the cidr of the interface
+# or 127.0.0.0/24 will be used. Setting these override the interface variables.
+# MANAGEMENT_INTERFACE_CIDR="Custom Cidr"
+
+# NOVA_INTERFACE_CIDR="Custom Cidr"
+
+# PUBLIC_INTERFACE_CIDR="Custom Cidr"
+
+
 # Package Removal
 # ==========================================================================
 function remove_apt_packages() {
@@ -509,9 +519,9 @@ function flavor_setup() {
 
   # Create a new Standard Flavor
   nova flavor-create "512MB Standard Instance" 1 512 5 1 --ephemeral 0 \
-                                                          --swap 512 \
-                                                          --rxtx-factor 1 \
-                                                          --is-public True
+                                                         --swap 512 \
+                                                         --rxtx-factor 1 \
+                                                         --is-public True
 }
 
 
@@ -684,6 +694,11 @@ UBUNTU_IMAGE=${UBUNTU_IMAGE:-False}
 FEDORA_IMAGE=${FEDORA_IMAGE:-False}
 CIRROS_IMAGE=${CIRROS_IMAGE:-False}
 
+# Bind Cidrs
+MANAGEMENT_INTERFACE_CIDR=${MANAGEMENT_INTERFACE_CIDR:-""}
+NOVA_INTERFACE_CIDR=${NOVA_INTERFACE_CIDR:-""}
+PUBLIC_INTERFACE_CIDR=${PUBLIC_INTERFACE_CIDR:-""}
+
 # Install Packages
 ${PACKAGE_INSTALL}
 
@@ -775,9 +790,10 @@ def get_network(interface):
         print('Interface "%s" not found, using "127.0.0.0/8".' % interface)
         return '127.0.0.0/8'
 
-management_network = get_network(interface="${MANAGEMENT_INTERFACE:-eth0}")
-nova_network = get_network(interface="${NOVA_INTERFACE:-eth0}")
-public_network = get_network(interface="${PUBLIC_INTERFACE:-eth0}")
+
+management_network = ${MANAGEMENT_INTERFACE_CIDR:-get_network(interface="${MANAGEMENT_INTERFACE:-eth0}")}
+nova_network = ${NOVA_INTERFACE_CIDR:-get_network(interface="${NOVA_INTERFACE:-eth0}")}
+public_network = ${PUBLIC_INTERFACE_CIDR:-get_network(interface="${PUBLIC_INTERFACE:-eth0}")}
 
 cirros_img_url = 'https://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-disk.img'
 ubuntu_img_url = 'http://cloud-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64-disk1.img'

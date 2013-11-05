@@ -1,8 +1,12 @@
+# Setup no roll back on failure
+export DISABLE_ROLL_BACK=true
+
 # Setup a master dev environment
 export COOKBOOK_VERSION="master"
 
-# Setup no roll back on failure
-export DISABLE_ROLL_BACK=true
+# Setup cidrs
+export NOVA_INTERFACE_CIDR="127.0.0.0/24"
+export PUBLIC_INTERFACE_CIDR="127.0.0.0/24"
 
 # Setup passwords
 export NOVA_PW="secrete"

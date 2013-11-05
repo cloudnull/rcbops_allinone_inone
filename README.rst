@@ -135,7 +135,14 @@ Default Images True||False, DEFAULT is False
   UBUNTU_IMAGE=False
 
   CIRROS_IMAGE=False
-  
+
+If these are not set, the script will attempt to determine the cidr of the interface or 127.0.0.0/24 will be used. **Setting these overrides the interface variables**.
+  MANAGEMENT_INTERFACE_CIDR="Network Cidr"
+
+  NOVA_INTERFACE_CIDR="Network Cidr"
+
+  PUBLIC_INTERFACE_CIDR="Network Cidr"
+
 ========
 
 
