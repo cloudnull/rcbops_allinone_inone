@@ -621,7 +621,7 @@ Password : ${SYSTEM_PW}
 trap "error_exit 'Received signal SIGHUP'" SIGHUP
 trap "error_exit 'Received signal SIGINT'" SIGINT
 trap "error_exit 'Received signal SIGTERM'" SIGTERM
-trap 'error_exit ${LINENO} ${$?}' ERR
+trap 'error_exit ${LINENO} $?' ERR
 
 
 # Begin the Install Process
@@ -801,7 +801,7 @@ else:
     nova_network = "${NOVA_INTERFACE_CIDR}"
 
 if not "${PUBLIC_INTERFACE_CIDR}":
-    public_network = :-get_network(interface="${PUBLIC_INTERFACE:-eth0}")
+    public_network = get_network(interface="${PUBLIC_INTERFACE:-eth0}")
 else:
     public_network = "${PUBLIC_INTERFACE_CIDR}"
 
