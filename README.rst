@@ -131,7 +131,9 @@ Disable roll back on Failure (NOTICE LETTER CASE)
 
 Default Images True||False, DEFAULT is False
   FEDORA_IMAGE=False
+
   UBUNTU_IMAGE=False
+
   CIRROS_IMAGE=False
   
 ========
