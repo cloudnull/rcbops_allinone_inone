@@ -65,7 +65,8 @@ This installation scrip has **ONLY** been tested on the following platforms:
 * Physical Server
 * Rackspace Cloud Server
 * Amazon AWS
-* VMWare Fusion (*EXTRAS MUST BE INSTALLED*)
+* VMWare Fusion
+* VirtualBox
 
 
 ========
