@@ -695,9 +695,9 @@ FEDORA_IMAGE=${FEDORA_IMAGE:-False}
 CIRROS_IMAGE=${CIRROS_IMAGE:-False}
 
 # Bind Cidrs
-MANAGEMENT_INTERFACE_CIDR=${MANAGEMENT_INTERFACE_CIDR:-None}
-NOVA_INTERFACE_CIDR=${NOVA_INTERFACE_CIDR:-None}
-PUBLIC_INTERFACE_CIDR=${PUBLIC_INTERFACE_CIDR:-None}
+MANAGEMENT_INTERFACE_CIDR=${MANAGEMENT_INTERFACE_CIDR:-""}
+NOVA_INTERFACE_CIDR=${NOVA_INTERFACE_CIDR:-""}
+PUBLIC_INTERFACE_CIDR=${PUBLIC_INTERFACE_CIDR:-""}
 
 # Install Packages
 ${PACKAGE_INSTALL}
@@ -790,20 +790,20 @@ def get_network(interface):
         print('Interface "%s" not found, using "127.0.0.0/8".' % interface)
         return '127.0.0.0/8'
 
-if not ${MANAGEMENT_INTERFACE_CIDR}:
+if not "${MANAGEMENT_INTERFACE_CIDR}":
     management_network = get_network(interface="${MANAGEMENT_INTERFACE:-eth0}")
 else:
     management_network = "${MANAGEMENT_INTERFACE_CIDR}"
 
-if not ${NOVA_INTERFACE_CIDR}:
+if not "${NOVA_INTERFACE_CIDR}":
     nova_network = get_network(interface="${NOVA_INTERFACE:-eth0}")
 else:
-    nova_network = ${NOVA_INTERFACE_CIDR}
+    nova_network = "${NOVA_INTERFACE_CIDR}"
 
-if not ${PUBLIC_INTERFACE_CIDR}:
+if not "${PUBLIC_INTERFACE_CIDR}":
     public_network = :-get_network(interface="${PUBLIC_INTERFACE:-eth0}")
 else:
-    public_network = ${PUBLIC_INTERFACE_CIDR}
+    public_network = "${PUBLIC_INTERFACE_CIDR}"
 
 cirros_img_url = 'https://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-disk.img'
 ubuntu_img_url = 'http://cloud-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64-disk1.img'
