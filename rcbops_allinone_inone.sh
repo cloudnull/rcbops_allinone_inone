@@ -297,6 +297,94 @@ function error_exit() {
 
 }
 
+
+function check_rclocal() {
+  if [ ! -f "/etc/rc.local" ];then
+    touch /etc/rc.local
+  fi
+
+  if [ "$(grep 'exit 0' /etc/rc.local)" ];then
+    sed -i '/exit\ 0/ s/^/#\ /' /etc/rc.local
+  fi
+}
+
+
+# Create a Cinder Volume file
+# ==========================================================================
+function create_cinder() {
+  LOOP=$(losetup -f)
+  dd if=/dev/zero of=${CINDER} bs=1 count=0 seek=1000G
+  losetup ${LOOP} ${CINDER}
+  pvcreate ${LOOP}
+  vgcreate cinder-volumes ${LOOP}
+
+  # Set Cinder Device as Persistent
+  cat > /opt/cinder.sh <<EOF
+#!/usr/bin/env bash
+LOOP=$(losetup -f)
+CINDER="/opt/cinder.img"
+losetup ${LOOP} ${CINDER}
+EOF
+
+  if [ -f "/opt/cinder.sh" ];then
+    check_rclocal
+    
+    if [ ! "$(grep 'cinder.sh' /etc/rc.local)" ];then 
+      echo "/opt/cinder.sh" | tee -a /etc/rc.local
+    fi
+    
+    chmod +x /etc/rc.local
+  fi
+
+}
+
+
+# Create a Swap file if the system has no swap
+# ==========================================================================
+function create_swap() {
+  if [ ! -d "/opt" ];then
+    mkdir /opt
+  fi
+
+  if [ ! "$(swapon -s | grep -v Filename)" ];then
+    cat > /opt/swap.sh <<EOF
+#!/usr/bin/env bash
+if [ ! "\$(swapon -s | grep -v Filename)" ];then
+SWAPFILE="/tmp/SwapFile"
+if [ -f "\${SWAPFILE}" ];then
+  swapoff -a
+  rm \${SWAPFILE}
+fi
+dd if=/dev/zero of=\${SWAPFILE} bs=1M count=2048
+mkswap \${SWAPFILE}
+swapon \${SWAPFILE}
+fi
+EOF
+  
+    chmod +x /opt/swap.sh
+    /opt/swap.sh
+  fi
+  
+  if [ -f "/opt/swap.sh" ];then
+    check_rclocal
+
+    if [ ! "$(grep 'swap.sh' /etc/rc.local)" ];then 
+      echo "/opt/swap.sh" | tee -a /etc/rc.local
+    fi
+    
+    chmod +x /etc/rc.local
+  fi
+  
+  SWAPPINESS=$(sysctl -a | grep vm.swappiness | awk -F' = ' '{print $2}')
+  if [ "${SWAPPINESS}" != 60 ];then
+    if [ "$(grep '^vm.swappiness$' /etc/sysctl.conf)" ];then
+      sed -i '/vm.swappiness.*/ s/^/#\ /' /etc/sysctl.conf
+    fi
+    sysctl vm.swappiness=60 | tee -a /etc/sysctl.conf
+  fi
+}
+
+
 file_cleanup() {
   echo "Performing File Cleanup"
 
@@ -506,6 +594,7 @@ This will give you shell access to the specific namespace's routing table
 
 Execute 'ip netns' for a full list of all network namespsaces on this Server.
 \"" | tee -a ~/.bashrc
+
 }
 
 
@@ -522,6 +611,7 @@ function flavor_setup() {
                                                          --swap 512 \
                                                          --rxtx-factor 1 \
                                                          --is-public True
+
 }
 
 
@@ -547,6 +637,7 @@ function boot_strap_node() {
   fi
 
   set -e
+
 }
 
 
@@ -698,6 +789,8 @@ CIRROS_IMAGE=${CIRROS_IMAGE:-False}
 MANAGEMENT_INTERFACE_CIDR=${MANAGEMENT_INTERFACE_CIDR:-""}
 NOVA_INTERFACE_CIDR=${NOVA_INTERFACE_CIDR:-""}
 PUBLIC_INTERFACE_CIDR=${PUBLIC_INTERFACE_CIDR:-""}
+
+create_swap
 
 # Install Packages
 ${PACKAGE_INSTALL}
@@ -965,18 +1058,11 @@ popd
 
 # Make Cinder Device
 if [ -b "${CINDER}" ];then
-    pvcreate ${CINDER}
-    vgcreate cinder-volumes ${CINDER}
-    sed -i "/$(echo ${CINDER} | sed 's/\//\\\//g')/ s/^/#\ /" /etc/fstab
+  pvcreate ${CINDER}
+  vgcreate cinder-volumes ${CINDER}
+  sed -i "/$(echo ${CINDER} | sed 's/\//\\\//g')/ s/^/#\ /" /etc/fstab
 else
-    LOOP=$(losetup -f)
-    dd if=/dev/zero of=${CINDER} bs=1 count=0 seek=1000G
-    losetup ${LOOP} ${CINDER}
-    pvcreate ${LOOP}
-    vgcreate cinder-volumes ${LOOP}
-
-    # Set Cinder Device as Persistent
-    echo -e 'LOOP=$(losetup -f)\nCINDER="/opt/cinder.img"\nlosetup ${LOOP} ${CINDER}' | tee /etc/rc.local
+  create_cinder
 fi
 
 # Run Chef Bootstrap
