@@ -803,7 +803,7 @@ ${PACKAGE_INSTALL}
 # Grab existing Chef Cookie
 CHEF_COOKIE=$(cat /var/lib/rabbitmq/.erlang.cookie)
 
-if [ "$(ip -f inet -o addr show ${MANAGEMENT_INTERFACE})" ];them
+if [ "$(ip -f inet -o addr show ${MANAGEMENT_INTERFACE})" ];then
   MANAGEMENT_IP=$(ip -f inet -o addr show ${MANAGEMENT_INTERFACE} | awk '{print $4}' | awk -F'/' '{print $1}')
 else
   MANAGEMENT_IP='#{node["ipaddress"]}'
