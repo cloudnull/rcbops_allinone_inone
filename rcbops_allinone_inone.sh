@@ -117,6 +117,12 @@ set -u
 
 # PUBLIC_INTERFACE_CIDR="Custom Cidr"
 
+# ==========================================================================
+# This is used for Testing Cookbooks. If you want to use a non-stock cookbook
+# you can specify them in this variable. The format is "name=branch=url"
+# This is a space seperated list.
+# TESTING_COOKBOOKS="name=branch=url"
+
 
 # Package Removal
 # ==========================================================================
@@ -141,6 +147,7 @@ function remove_apt_packages() {
 
   # Remove all packages which are no longer needed
   apt-get -y autoremove
+
 }
 
 function remove_rpm_packages() {
@@ -179,12 +186,121 @@ function remove_rpm_packages() {
 }
 
 
-# Configure Rabbit
+# Error Handler
 # ==========================================================================
-function rabbit_setup() {
-  rabbitmqctl add_vhost /chef
-  rabbitmqctl add_user chef ${RMQ_PW}
-  rabbitmqctl set_permissions -p /chef chef '.*' '.*' '.*'
+function error_message() {
+  # Print Messages
+  echo "ERROR ON LINE: ${1}, MESSAGE ${2}, ALL KNOWN DATA ${@}"
+  exit 1
+
+}
+
+function error_exit() {
+  if ${DISABLE_ROLL_BACK};then
+    echo "NO ROLL BACK BEING DONE!"
+    error_message $@
+  else
+    set +e
+    set +u
+    set +v
+
+    # Remove Packages
+    echo "Removing Known Files and Folders."
+    ${REMOVE_SYSTEM_PACKAGES}
+
+    # Cleanup all the things
+    service_stop
+    cinder_device_remove
+    file_cleanup
+    directory_cleanup
+    error_message $@
+  fi
+
+}
+
+
+function file_cleanup() {
+  echo "Performing File Cleanup"
+
+  [ -f "/tmp/chef_server.deb" ] && rm /tmp/chef_server.deb
+  [ -f "/opt/cinder.img" ] && rm /opt/cinder.img
+  [ -f "/root/.ssh/id_rsa.pub" ] && rm /root/.ssh/id_rsa.pub
+  [ -f "/root/.ssh/id_rsa" ] && rm /root/.ssh/id_rsa
+  [ -f "/root/.my.cnf" ] && rm /root/.my.cnf
+  [ -f "/root/openrc" ] && rm /root/openrc
+  [ -f "/etc/yum.repos.d/epel.repo" ] && rm /etc/yum.repos.d/epel.repo
+  [ -f "/etc/yum.repos.d/epel-testing.repo" ] && rm /etc/yum.repos.d/epel-testing.repo
+  [ -f "/etc/yum.repos.d/remi.repo" ] && rm /etc/yum.repos.d/remi.repo
+  [ -f "/etc/my.cnf.rpmsave" ] && rm /etc/my.cnf.rpmsave
+  [ -f "/etc/mysql_grants.sql" ] && rm /etc/mysql_grants.sql
+  [ -f "/etc/init/chef-server-runsvdir.conf" ] && rm /etc/init/chef-server-runsvdir.conf
+  [ -f "/tmp/epel-release-6-8.noarch.rpm" ] && rm /tmp/epel-release-6-8.noarch.rpm
+  [ -f "/tmp/rabbitmq.rpm" ] && rm /tmp/rabbitmq.rpm
+  [ -f "/tmp/rabbitmq.asc" ] && rm /tmp/rabbitmq.asc
+  [ -f "/tmp/remi-release-6.rpm" ] && rm /tmp/remi-release-6.rpm
+  [ -f "/tmp/mods.txt" ] && rm /tmp/mods.txt
+  [ -f "/var/log/mysqld.log.rpmsave" ] && rm /var/log/mysqld.log.rpmsave
+
+  # Remove ALL temp files
+  for temp_file in $(ls /tmp/);do
+    rm -rf /tmp/${temp_file}
+  done
+
+}
+
+
+function directory_cleanup() {
+  echo "Performing Directory Cleanup"
+
+  [ -d "/tmp/opt/chef-server" ] && rm -rf /tmp/opt/chef-server
+  [ -d "/opt/allinoneinone/" ] && rm -rf /opt/allinoneinone/
+  [ -d "/opt/aioio-installed.lock" ] && rm /opt/aioio-installed.lock
+  [ -d "/opt/chef-server" ] && rm -rf /opt/chef-server
+  [ -d "/opt/chef" ] && rm -rf /opt/chef
+  [ -d "/root/.chef" ] && rm -rf /root/.chef
+  [ -d "/etc/chef" ] && rm -rf /etc/chef
+  [ -d "/etc/rabbitmq" ] && rm -rf /etc/rabbitmq
+  [ -d "/etc/chef-server" ] && rm -rf /etc/chef-server
+  [ -d "/etc/mysql" ] && rm -rf /etc/mysql
+  [ -d "/usr/lib/rabbitmq" ] && rm -rf /usr/lib/rabbitmq
+  [ -d "/var/chef" ] && rm -rf /var/chef
+  [ -d "/var/opt/chef-server" ] && rm -rf /var/opt/chef-server
+  [ -d "/var/lib/rabbitmq/" ] && rm -rf /var/lib/rabbitmq/
+  [ -d "/var/lib/mysql/" ] && rm -rf /var/lib/mysql/
+  [ -d "/var/log/chef-server" ] && rm -rf /var/log/chef-server
+  [ -d "/var/log/mysql" ] && rm -rf /var/log/mysql
+  [ -d "/var/log/rabbitmq" ] && rm -rf /var/log/rabbitmq
+
+}
+
+
+function cinder_device_remove() {
+  # Remove any loopback devices setup
+  for loopback_dev in $(losetup -a | awk -F':' '{print $1}');do
+    if [ "${loopback_dev}" ];then
+      losetup -d ${loopback_dev}
+    fi
+  done
+
+}
+
+function service_stop() {
+  # general Services
+  SERVICES="rabbitmq nginx chef-server-webui erchef bookshelf chef apache mysql httpd libvirt "
+  # Openstack Services
+  SERVICES+=${OPENSTACK_SERVICES}
+
+  # Stop Service
+  for service in ${SERVICES}; do
+    for pid in $(ps auxf | grep -i ${service} | grep -v grep | awk '{print $2}'); do
+      if [ "${pid}" ];then
+        if [ "$(ps auxf | grep ${pid} | grep -v grep | awk '{print $2}')" ];then
+          kill ${pid}
+        fi
+      fi
+    done
+  done
+
 }
 
 
@@ -207,7 +323,9 @@ function install_apt_packages() {
   CHEF_SERVER_PACKAGE_URL=${CHEF_SERVER_PACKAGE_URL:-$CHEF}
   wget -O /tmp/chef_server.deb ${CHEF_SERVER_PACKAGE_URL}
   dpkg -i /tmp/chef_server.deb
+
 }
+
 
 function install_yum_packages() {
   # Install BASE Packages
@@ -253,64 +371,6 @@ function install_yum_packages() {
 }
 
 
-# OS Check
-# ==========================================================================
-if [ "$(grep -i -e redhat -e centos /etc/redhat-release)"  ]; then
-  REMOVE_SYSTEM_PACKAGES=remove_rpm_packages
-  PACKAGE_INSTALL=install_yum_packages
-elif [ "$(grep -i ubuntu /etc/lsb-release)" ];then
-  REMOVE_SYSTEM_PACKAGES=remove_apt_packages
-  PACKAGE_INSTALL=install_apt_packages
-else
-  echo "This is not Ubuntu, So this script will not work."
-  exit 1
-fi
-
-
-# Error Handler
-# ==========================================================================
-function error_message() {
-  # Print Messages
-  echo "ERROR! $@"
-  exit 1
-
-}
-
-function error_exit() {
-  if ${DISABLE_ROLL_BACK};then
-    echo "NO ROLL BACK BEING DONE!"
-    error_message
-  else
-    set +e
-    set +u
-    set +v
-
-    # Remove Packages
-    echo "Removing Known Files and Folders."
-    ${REMOVE_SYSTEM_PACKAGES}
-
-    # Cleanup all the things
-    service_stop
-    cinder_device_remove
-    file_cleanup
-    directory_cleanup
-    error_message
-  fi
-
-}
-
-
-function check_rclocal() {
-  if [ ! -f "/etc/rc.local" ];then
-    touch /etc/rc.local
-  fi
-
-  if [ "$(grep 'exit 0' /etc/rc.local)" ];then
-    sed -i '/exit\ 0/ s/^/#\ /' /etc/rc.local
-  fi
-}
-
-
 # Create a Cinder Volume file
 # ==========================================================================
 function create_cinder() {
@@ -343,6 +403,18 @@ EOF
 
 # Create a Swap file if the system has no swap
 # ==========================================================================
+function check_rclocal() {
+  if [ ! -f "/etc/rc.local" ];then
+    touch /etc/rc.local
+  fi
+
+  if [ "$(grep 'exit 0' /etc/rc.local)" ];then
+    sed -i '/exit\ 0/ s/^/#\ /' /etc/rc.local
+  fi
+
+}
+
+
 function create_swap() {
   if [ ! -d "/opt" ];then
     mkdir /opt
@@ -384,158 +456,38 @@ EOF
     fi
     sysctl vm.swappiness=60 | tee -a /etc/sysctl.conf
   fi
-}
-
-
-file_cleanup() {
-  echo "Performing File Cleanup"
-
-  # Remove Downloaded Chef DEB
-  [ -f "/tmp/chef_server.deb" ] && rm /tmp/chef_server.deb
-
-  # Remove CINDER Device
-  [ -f "/opt/cinder.img" ] && rm /opt/cinder.img
-
-  # Remove pubic key
-  [ -f "/root/.ssh/id_rsa.pub" ] && rm /root/.ssh/id_rsa.pub
-
-  # Remove private key
-  [ -f "/root/.ssh/id_rsa" ] && rm /root/.ssh/id_rsa
-
-  # Remove MySQL cnf file
-  [ -f "/root/.my.cnf" ] && rm /root/.my.cnf
-
-  # Remove source file
-  [ -f "/root/openrc" ] && rm /root/openrc
-
-  # Remove EPEL repo
-  [ -f "/etc/yum.repos.d/epel.repo" ] && rm /etc/yum.repos.d/epel.repo
-
-  # Remove EPEL Testing repo
-  [ -f "/etc/yum.repos.d/epel-testing.repo" ] && rm /etc/yum.repos.d/epel-testing.repo
-
-  # Remove REMI repo
-  [ -f "/etc/yum.repos.d/remi.repo" ] && rm /etc/yum.repos.d/remi.repo
-
-  # Remove MYSQL cnf file
-  [ -f "/etc/my.cnf.rpmsave" ] && rm /etc/my.cnf.rpmsave
-
-  # Remove MySQL Grants
-  [ -f "/etc/mysql_grants.sql" ] && rm /etc/mysql_grants.sql
-
-  # Remove Chef init
-  [ -f "/etc/init/chef-server-runsvdir.conf" ] && rm /etc/init/chef-server-runsvdir.conf
-
-  # Remove EPEL RPM
-  [ -f "/tmp/epel-release-6-8.noarch.rpm" ] && rm /tmp/epel-release-6-8.noarch.rpm
-
-  # Remove RabbitMQ RPM
-  [ -f "/tmp/rabbitmq.rpm" ] && rm /tmp/rabbitmq.rpm
-
-  # Remove RabbitMQ asc
-  [ -f "/tmp/rabbitmq.asc" ] && rm /tmp/rabbitmq.asc
-
-  # Remove REMI RPM
-  [ -f "/tmp/remi-release-6.rpm" ] && rm /tmp/remi-release-6.rpm
-  
-  # Remove temp mods
-  [ -f "/tmp/mods.txt" ] && rm /tmp/mods.txt
-
-  # Remove MySQL log file
-  [ -f "/var/log/mysqld.log.rpmsave" ] && rm /var/log/mysqld.log.rpmsave
-
-  # Remove ALL temp files
-  for temp_file in $(ls /tmp/);do
-    rm -rf /tmp/${temp_file}
-  done
 
 }
 
-directory_cleanup() {
-  echo "Performing Directory Cleanup"
 
-  # Remove temp opt chef-server directory
-  [ -d "/tmp/opt/chef-server" ] && rm -rf /tmp/opt/chef-server
+# Test Cookbooks
+# ==========================================================================
+function testing_cookbooks() {
+  if [ "${TESTING_COOKBOOKS}" ];then
+    pushd /opt/allinoneinone/chef-cookbooks/cookbooks
+    for COOKBOOK in ${TESTING_COOKBOOKS};do
+      NAME=$(echo ${COOKBOOK} | awk -F'=' '{print $1}')
+      BRANCH=$(echo ${COOKBOOK} | awk -F'=' '{print $2}')
+      URL=$(echo ${COOKBOOK} | awk -F'=' '{print $3}')
 
-  # Remove All in one directory
-  [ -d "/opt/allinoneinone/" ] && rm -rf /opt/allinoneinone/
-
-  [ -d "/opt/aioio-installed.lock" ] && rm /opt/aioio-installed.lock
-
-  # Remove opt chef-server directory
-  [ -d "/opt/chef-server" ] && rm -rf /opt/chef-server
-
-  # Remove opt chef directory
-  [ -d "/opt/chef" ] && rm -rf /opt/chef
-
-  # Remove Chef Directory
-  [ -d "/root/.chef" ] && rm -rf /root/.chef
-
-  # Remove chef-server etc Directory
-  [ -d "/etc/chef" ] && rm -rf /etc/chef
-
-  # Remove Rabbit etc directory
-  [ -d "/etc/rabbitmq" ] && rm -rf /etc/rabbitmq
-
-  # Remove chef-server etc Directory
-  [ -d "/etc/chef-server" ] && rm -rf /etc/chef-server
-
-  # Remove MYSQL Dir
-  [ -d "/etc/mysql" ] && rm -rf /etc/mysql
-
-  # Remove Rabbit DIR
-  [ -d "/usr/lib/rabbitmq" ] && rm -rf /usr/lib/rabbitmq
-
-  # Remove Chef-server Directory
-  [ -d "/var/chef" ] && rm -rf /var/chef
-
-  # Remove Var chef-server directory
-  [ -d "/var/opt/chef-server" ] && rm -rf /var/opt/chef-server
-
-  # Remove rabbitmq directory
-  [ -d "/var/lib/rabbitmq/" ] && rm -rf /var/lib/rabbitmq/
-
-  # Remove Databases
-  [ -d "/var/lib/mysql/" ] && rm -rf /var/lib/mysql/
-
-  # Remove chef-server logs
-  [ -d "/var/log/chef-server" ] && rm -rf /var/log/chef-server
-
-  # Remove MySQL Log Dir
-  [ -d "/var/log/mysql" ] && rm -rf /var/log/mysql
-
-  # Remove Rabbit Log Dir
-  [ -d "/var/log/rabbitmq" ] && rm -rf /var/log/rabbitmq
-
-}
-
-cinder_device_remove() {
-  # Remove any loopback devices setup
-  for loopback_dev in $(losetup -a | awk -F':' '{print $1}');do
-    if [ "${loopback_dev}" ];then
-      losetup -d ${loopback_dev}
-    fi
-  done
-
-}
-
-service_stop() {
-  # general Services
-  SERVICES="rabbitmq nginx chef-server-webui erchef bookshelf chef apache mysql httpd libvirt "
-  # Openstack Services
-  SERVICES+=${OPENSTACK_SERVICES}
-
-  # Stop Service
-  for service in ${SERVICES}; do
-    for pid in $(ps auxf | grep -i ${service} | grep -v grep | awk '{print $2}'); do
-      if [ "${pid}" ];then
-        if [ "$(ps auxf | grep ${pid} | grep -v grep | awk '{print $2}')" ];then
-          kill ${pid}
-        fi
+      if [ -d "${NAME}" ];then
+        rm -rf ${NAME}
       fi
-    done
-  done
 
+      git clone -b ${BRANCH} ${URL} ${NAME}
+    done
+    popd
+  fi
+
+}
+
+
+# Configure Rabbit
+# ==========================================================================
+function rabbit_setup() {
+  rabbitmqctl add_vhost /chef
+  rabbitmqctl add_user chef ${RMQ_PW}
+  rabbitmqctl set_permissions -p /chef chef '.*' '.*' '.*'
 }
 
 
@@ -711,15 +663,26 @@ Password : ${SYSTEM_PW}
 }
 
 # Trap all Death Signals and Errors
-trap "error_exit 'Received signal SIGHUP'" SIGHUP
-trap "error_exit 'Received signal SIGINT'" SIGINT
-trap "error_exit 'Received signal SIGTERM'" SIGTERM
-trap 'error_exit ${LINENO} $?' ERR
+trap "error_exit 'Received STOP Signal'" SIGHUP SIGINT SIGTERM
+trap "error_exit ${LINENO} $?" ERR
 
 
 # Begin the Install Process
 # ============================================================================
 # Check for previous Installation
+
+# OS Check
+if [ "$(grep -i -e redhat -e centos /etc/redhat-release)"  ]; then
+  REMOVE_SYSTEM_PACKAGES=remove_rpm_packages
+  PACKAGE_INSTALL=install_yum_packages
+elif [ "$(grep -i ubuntu /etc/lsb-release)" ];then
+  REMOVE_SYSTEM_PACKAGES=remove_apt_packages
+  PACKAGE_INSTALL=install_apt_packages
+else
+  echo "This is not a supported OS, So this script will not work."
+  exit 1
+fi
+
 if [ -f "/opt/aioio-installed.lock" ];then
   echo "Lock File found at \"/opt/aioio-installed.lock\""
   echo "I am assuming that this installation has already been completed on this box."
@@ -786,6 +749,9 @@ RUN_LIST=${RUN_LIST:-"role[allinone],role[cinder-all]"}
 UBUNTU_IMAGE=${UBUNTU_IMAGE:-False}
 FEDORA_IMAGE=${FEDORA_IMAGE:-False}
 CIRROS_IMAGE=${CIRROS_IMAGE:-False}
+
+# Testing Cookbooks
+TESTING_COOKBOOKS=${TESTING_COOKBOOKS:-""}
 
 # Bind Interfaces
 MANAGEMENT_INTERFACE=${MANAGEMENT_INTERFACE:-lo}
@@ -865,6 +831,9 @@ git submodule update
 knife cookbook site download -f /tmp/cron.tar.gz cron 1.2.6 && tar xf /tmp/cron.tar.gz -C /opt/allinoneinone/chef-cookbooks/cookbooks
 knife cookbook site download -f /tmp/chef-client.tar.gz chef-client 3.0.6 && tar xf /tmp/chef-client.tar.gz -C /opt/allinoneinone/chef-cookbooks/cookbooks
 
+# Get / Replace all testing cookbooks
+testing_cookbooks
+
 # Upload all of the RCBOPS Cookbooks
 knife cookbook upload -o /opt/allinoneinone/chef-cookbooks/cookbooks -a
 
@@ -910,10 +879,6 @@ if not "${PUBLIC_INTERFACE_CIDR}":
     public_network = get_network(interface="${PUBLIC_INTERFACE}")
 else:
     public_network = "${PUBLIC_INTERFACE_CIDR}"
-
-cirros_img_url = 'https://launchpad.net/cirros/trunk/0.3.0/+download/cirros-0.3.0-x86_64-disk.img'
-ubuntu_img_url = 'http://cloud-images.ubuntu.com/precise/current/precise-server-cloudimg-amd64-disk1.img'
-fedora_img_url = 'http://download.fedoraproject.org/pub/fedora/linux/releases/19/Images/x86_64/Fedora-x86_64-19-20130627-sda.qcow2'
 
 env = {'chef_type': 'environment',
   'cookbook_versions': {},
@@ -1043,6 +1008,14 @@ else:
         }
     })
 
+cirros_img_url = ('https://launchpad.net/cirros/trunk/0.3.0/+download/'
+                  'cirros-0.3.0-x86_64-disk.img')
+ubuntu_img_url = ('http://cloud-images.ubuntu.com/precise/current/'
+                  'precise-server-cloudimg-amd64-disk1.img')
+fedora_img_url = ('http://download.fedoraproject.org/pub/fedora/linux/'
+                  'releases/19/Images/x86_64/'
+                  'Fedora-x86_64-19-20130627-sda.qcow2')
+    
 if ${UBUNTU_IMAGE} is True:
     env['override_attributes']['glance']['image']['ubuntu'] = ubuntu_img_url
     env['override_attributes']['glance']['images'].append('ubuntu')
