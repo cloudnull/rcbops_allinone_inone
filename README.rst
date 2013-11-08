@@ -144,6 +144,10 @@ If these are not set, the script will attempt to determine the cidr of the inter
 
   PUBLIC_INTERFACE_CIDR="Network Cidr"
 
+This is used for Testing Cookbooks. If you want to use a non-stock cookbook you can specify them in this variable. The format is "name=branch=url" This is a space seperated list.  
+  TESTING_COOKBOOKS="name=branch=url"
+
+
 ========
 
 
