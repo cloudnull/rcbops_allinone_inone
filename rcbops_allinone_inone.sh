@@ -663,7 +663,7 @@ Password : ${SYSTEM_PW}
 }
 
 # Trap all Death Signals and Errors
-trap "error_exit 'Received STOP Signal'" SIGHUP SIGINT SIGTERM
+trap "error_exit ${LINENO} $? 'Received STOP Signal'" SIGHUP SIGINT SIGTERM
 trap "error_exit ${LINENO} $?" ERR
 
 
