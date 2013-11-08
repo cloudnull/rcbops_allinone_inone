@@ -885,14 +885,14 @@ def get_network(interface):
             routes = device['routes']
             for net in routes:
                 if 'scope' in net:
-                    return net.get('destination', '127.0.0.0/8')
+                    return net.get('destination', '127.0.0.0/24')
                     break
+            else:
+                return '127.0.0.0/24'
         else:
-            print('Interface "%s" not found, using "127.0.0.0/8".' % interface)
-            return '127.0.0.0/8'
+            return '127.0.0.0/24'
     else:
-        print('Interface "%s" not found, using "127.0.0.0/8".' % interface)
-        return '127.0.0.0/8'
+        return '127.0.0.0/24'
 
 if not "${MANAGEMENT_INTERFACE_CIDR}":
     management_network = get_network(interface="${MANAGEMENT_INTERFACE}")
