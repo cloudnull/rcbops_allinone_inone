@@ -36,7 +36,7 @@ Execute the script::
   curl https://raw.github.com/cloudnull/rcbops_allinone_inone/master/rcbops_allinone_inone.sh | bash
 
 
-Not simply sit back and enjoy my hard work and watch cloud cook. In about 7 minutes (1) you will have a functional Openstack Cloud. 
+Now simply sit back and enjoy my hard work and watch cloud cook. In about 7 minutes (1) you will have a functional Openstack Cloud. 
 
 
 But Wait There's More!
