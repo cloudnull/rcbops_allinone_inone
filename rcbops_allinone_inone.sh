@@ -390,11 +390,11 @@ EOF
 
   if [ -f "/opt/cinder.sh" ];then
     check_rclocal
-    
-    if [ ! "$(grep 'cinder.sh' /etc/rc.local)" ];then 
+
+    if [ ! "$(grep 'cinder.sh' /etc/rc.local)" ];then
       echo "/opt/cinder.sh" | tee -a /etc/rc.local
     fi
-    
+
     chmod +x /etc/rc.local
   fi
 
@@ -434,21 +434,21 @@ mkswap \${SWAPFILE}
 swapon \${SWAPFILE}
 fi
 EOF
-  
+
     chmod +x /opt/swap.sh
     /opt/swap.sh
   fi
-  
+
   if [ -f "/opt/swap.sh" ];then
     check_rclocal
 
-    if [ ! "$(grep 'swap.sh' /etc/rc.local)" ];then 
+    if [ ! "$(grep 'swap.sh' /etc/rc.local)" ];then
       echo "/opt/swap.sh" | tee -a /etc/rc.local
     fi
-    
+
     chmod +x /etc/rc.local
   fi
-  
+
   SWAPPINESS=$(sysctl -a | grep vm.swappiness | awk -F' = ' '{print $2}')
   if [ "${SWAPPINESS}" != 60 ];then
     if [ "$(grep '^vm.swappiness$' /etc/sysctl.conf)" ];then
@@ -497,7 +497,7 @@ function neutron_setup() {
   # Add in some Kernel Options
   MODS="/tmp/mods.txt"
   sysctl -a | sed 's/\ //g' | tee ${MODS}
-    
+
   if [ -f "/etc/sysctl.conf" ];then
     if [ "$(awk -F'=' '/net.ipv4.ip_forward/ {print $2}' ${MODS})" == "0" ];then
       sysctl net.ipv4.ip_forward=1 | tee -a /etc/sysctl.conf
@@ -528,22 +528,23 @@ function neutron_setup() {
 
   # Configure OVS
   ovs-vsctl add-port br-${NEUTRON_INTERFACE} ${NEUTRON_INTERFACE}
-  
+
   # Add Default Ping Security Group
-  neutron security-group-rule-create --protocol icmp --direction ingress default
+  ${NEUTRON_NAME} security-group-rule-create --protocol icmp \
+                                             --direction ingress default
 
   # Add Default SSH Security Group
-  neutron security-group-rule-create --protocol tcp \
-                                     --port-range-min 22 \
-                                     --port-range-max 22 \
-                                     --direction ingress \
-                                     default
+  ${NEUTRON_NAME} security-group-rule-create --protocol tcp \
+                                             --port-range-min 22 \
+                                             --port-range-max 22 \
+                                             --direction ingress \
+                                             default
 
   # Add notice to bash login
   echo -e "
-echo \"Remember! That this system is using Neutron Setup. To gain access to an 
-instance via the command line you MUST execute commands within in the namespace. 
-Example, 'ip netns exec NAME_SPACE_ID bash'. 
+echo \"Remember! That this system is using Neutron Setup. To gain access to an
+instance via the command line you MUST execute commands within in the namespace.
+Example, 'ip netns exec NAME_SPACE_ID bash'.
 This will give you shell access to the specific namespace's routing table
 
 Execute 'ip netns' for a full list of all network namespsaces on this Server.
@@ -556,7 +557,7 @@ Execute 'ip netns' for a full list of all network namespsaces on this Server.
 # ==========================================================================
 function flavor_setup() {
   # Delete all of the m1 flavors
-  for FLAVOR in $(nova flavor-list | awk '/m1/ {print $2}');do 
+  for FLAVOR in $(nova flavor-list | awk '/m1/ {print $2}');do
     nova flavor-delete ${FLAVOR}
   done
 
@@ -1015,17 +1016,17 @@ ubuntu_img_url = ('http://cloud-images.ubuntu.com/precise/current/'
 fedora_img_url = ('http://download.fedoraproject.org/pub/fedora/linux/'
                   'releases/19/Images/x86_64/'
                   'Fedora-x86_64-19-20130627-sda.qcow2')
-    
+
 if ${UBUNTU_IMAGE} is True:
     env['override_attributes']['glance']['image']['ubuntu'] = ubuntu_img_url
     env['override_attributes']['glance']['images'].append('ubuntu')
-        
+
 
 if ${FEDORA_IMAGE} is True:
     env['override_attributes']['glance']['image']['fedora'] = fedora_img_url
     env['override_attributes']['glance']['images'].append('fedora')
 
-    
+
 if ${CIRROS_IMAGE} is True:
     env['override_attributes']['glance']['image']['cirros'] = cirros_img_url
     env['override_attributes']['glance']['images'].append('cirros')
@@ -1053,7 +1054,7 @@ fi
 
 # Run Chef Bootstrap
 boot_strap_node
-  
+
 # go to root home
 pushd /root
 
