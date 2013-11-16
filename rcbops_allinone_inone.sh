@@ -177,8 +177,8 @@ function remove_rpm_packages() {
 
   # Restore IPTables if set
   if [ -f "/etc/iptables.original" ];then
-    if [ "$(which iptables-restore)" ];then
-      $(which iptables-restore) < /etc/iptables.original
+    if [ "${IPTABLES_RESTORE}" ];then
+      ${IPTABLES_RESTORE} < /etc/iptables.original
       service iptables save
     fi
   fi
@@ -331,13 +331,13 @@ function install_yum_packages() {
   # Install BASE Packages
   yum -y install git lvm2
 
-  if [ "$(which iptables-save)" ];then
-    $(which iptables-save) > /etc/iptables.original
+  if [ "${IPTABLES_SAVE}" ];then
+    ${IPTABLES_SAVE} > /etc/iptables.original
   fi
-
-  if [ "$(which iptables)" ];then
-    $(which iptables) -I INPUT -m tcp -p tcp --dport 443 -j ACCEPT
-    $(which iptables) -I INPUT -m tcp -p tcp --dport 80 -j ACCEPT
+  
+  if [ "${IPTABLES}" ];then
+    ${IPTABLES} -I INPUT -m tcp -p tcp --dport 443 -j ACCEPT
+    ${IPTABLES} -I INPUT -m tcp -p tcp --dport 80 -j ACCEPT
     service iptables save
   fi
 
@@ -541,14 +541,14 @@ function neutron_setup() {
                                              default
 
   # Add notice to bash login
-  echo -e "
-echo \"Remember! That this system is using Neutron Setup. To gain access to an
-instance via the command line you MUST execute commands within in the namespace.
-Example, 'ip netns exec NAME_SPACE_ID bash'.
-This will give you shell access to the specific namespace's routing table
+  echo -e '
+Remember! That this system is using Neutron. To gain access to an instance via 
+the command line you MUST execute commands within in the namespace. Example, 
+"ip netns exec NAME_SPACE_ID bash".
 
-Execute 'ip netns' for a full list of all network namespsaces on this Server.
-\"" | tee -a /etc/motd
+This will give you shell access to the specific namespace routing table Execute 
+"ip netns" for a full list of all network namespsaces on this Server.
+' | tee -a /etc/motd
 
 }
 
@@ -606,7 +606,7 @@ function success_exit() {
 
   # Reset users Password post installation
   IAM=$(whoami)
-  echo -e "${SYSTEM_PW}\n${SYSTEM_PW}" | ($(which passwd) ${IAM})
+  echo -e "${SYSTEM_PW}\n${SYSTEM_PW}" | (${PASSWD} ${IAM})
 
   # Notify the users and set new the MOTD
   echo -e "
@@ -778,6 +778,15 @@ else
   MANAGEMENT_IP='#{node["ipaddress"]}'
 fi
 
+
+# Set the PATH on things we need
+PYTHON_PATH=${PYTHON_PATH:-"$(which python)"}
+IPTABLES_RESTORE=${IPTABLES_RESTORE:-"$(which iptables-restore)"}
+IPTABLES_SAVE=${IPTABLES_SAVE:-"$(which iptables-save)"}
+IPTABLES=${IPTABLES:-"$(which iptables)"}
+PASSWD=${PASSWD:-"$(which passwd)"}
+
+
 # Configure Chef Vars
 mkdir -p /etc/chef-server
 cat > /etc/chef-server/chef-server.rb <<EOF
@@ -842,7 +851,7 @@ knife cookbook upload -o /opt/allinoneinone/chef-cookbooks/cookbooks -a
 knife role from file /opt/allinoneinone/chef-cookbooks/roles/*.rb
 
 # Set the Default Chef Environment
-$(which python) << EOF
+${PYTHON_PATH} << EOF
 import json
 import subprocess
 
