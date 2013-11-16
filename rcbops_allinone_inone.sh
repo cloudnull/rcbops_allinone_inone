@@ -548,7 +548,7 @@ Example, 'ip netns exec NAME_SPACE_ID bash'.
 This will give you shell access to the specific namespace's routing table
 
 Execute 'ip netns' for a full list of all network namespsaces on this Server.
-\"" | tee -a ~/.bashrc
+\"" | tee -a /etc/motd
 
 }
 
