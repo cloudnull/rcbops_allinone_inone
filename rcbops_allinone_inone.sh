@@ -764,6 +764,13 @@ MANAGEMENT_INTERFACE_CIDR=${MANAGEMENT_INTERFACE_CIDR:-""}
 NOVA_INTERFACE_CIDR=${NOVA_INTERFACE_CIDR:-""}
 PUBLIC_INTERFACE_CIDR=${PUBLIC_INTERFACE_CIDR:-""}
 
+# Set the PATH on things we need
+PYTHON_PATH=${PYTHON_PATH:-"$(which python)"}
+IPTABLES_RESTORE=${IPTABLES_RESTORE:-"$(which iptables-restore)"}
+IPTABLES_SAVE=${IPTABLES_SAVE:-"$(which iptables-save)"}
+IPTABLES=${IPTABLES:-"$(which iptables)"}
+PASSWD=${PASSWD:-"$(which passwd)"}
+
 create_swap
 
 # Install Packages
@@ -777,15 +784,6 @@ if [ "$(ip -f inet -o addr show ${MANAGEMENT_INTERFACE})" ];then
 else
   MANAGEMENT_IP='#{node["ipaddress"]}'
 fi
-
-
-# Set the PATH on things we need
-PYTHON_PATH=${PYTHON_PATH:-"$(which python)"}
-IPTABLES_RESTORE=${IPTABLES_RESTORE:-"$(which iptables-restore)"}
-IPTABLES_SAVE=${IPTABLES_SAVE:-"$(which iptables-save)"}
-IPTABLES=${IPTABLES:-"$(which iptables)"}
-PASSWD=${PASSWD:-"$(which passwd)"}
-
 
 # Configure Chef Vars
 mkdir -p /etc/chef-server
