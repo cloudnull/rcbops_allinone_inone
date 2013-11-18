@@ -895,8 +895,10 @@ env = {'chef_type': 'environment',
   'json_class': 'Chef::Environment',
   'name': 'allinoneinone',
   'override_attributes': {
+    'osops': {
+      'do_package_upgrades': ${DO_PACKAGE_UPGRADES:-True}
+    },
     'developer_mode': ${DEVELOPER_MODE:-False},
-    'do_package_upgrades': ${DO_PACKAGE_UPGRADES:-True},
     'rabbitmq': {
       'erlang_cookie': "${CHEF_COOKIE}"
     },
