@@ -1,0 +1,208 @@
+heat_template_version: 2013-05-23
+
+description: |
+  A template implementation of a resource that provides an Openstack installation using the Rackspace Private Cloud Software.
+
+parameters:
+
+  image:
+    description: Rackspace Cloud Server Image (Distribution)
+    type: String
+    default: Ubuntu 12.04 LTS (Precise Pangolin)
+    constraints:
+    - allowed_values:
+      - Ubuntu 12.04 LTS (Precise Pangolin)
+      - CentOS 6.4
+      - Red Hat Enterprise Linux 6.4
+      - precise-image
+      - centos-image
+      - rhel-image
+      description: Must be a valid Rackspace Cloud Server Image, default is Ubuntu 12.04 LTS (Precise Pangolin).
+
+  flavor:
+    description: Rackspace Cloud Server flavor (Size)
+    type: String
+    default: 4GB Standard Instance
+    constraints:
+    - allowed_values:
+      - 2GB Standard Instance
+      - 4GB Standard Instance
+      - 8GB Standard Instance
+      - 15GB Standard Instance
+      - 30GB Standard Instance
+      - 1 GB Performance
+      - 2 GB Performance
+      - 4 GB Performance
+      - 8 GB Performance
+      - 15 GB Performance
+      - 30 GB Performance
+      - 60 GB Performance
+      - 90 GB Performance
+      - 120 GB Performance
+      - m1.small
+      - m1.medium
+      - m1.large
+      - m1.xlarge
+      description: Must be a valid Rackspace Cloud Server flavor large enough to run Chef and Openstack, Default is 4GB.
+
+  os_admin_pass:
+    default: secrete
+    hidden: true
+    description: Password for the Openstack Admin User
+    type: String
+    constraints:
+    - length:
+        min: 1
+        max: 25
+      description: Password MUST be between 1 - 25 characters.
+    - allowed_pattern: "[a-zA-Z0-9]*"
+      description : Only Alpha-Numeric characters are allowed. This is the admin password which will be used for OpenStack.
+
+  system_pass:
+    default: secrete
+    hidden: true
+    description: Password for the System User
+    type: String
+    constraints:
+    - length:
+        min: 1
+        max: 25
+      description: Password MUST be between 1 - 25 characters.
+    - allowed_pattern: "[a-zA-Z0-9]*"
+      description : Only Alpha-Numeric characters are allowed. This is the System user password.
+
+  chef_admin_pass:
+    default: secrete
+    hidden: true
+    description: Password for the Chef Admin User
+    type: String
+    constraints:
+    - length:
+        min: 1
+        max: 25
+      description: Password MUST be between 1 - 25 characters.
+    - allowed_pattern: "[a-zA-Z0-9]*"
+      description : Only Alpha-Numeric characters are allowed. This is the admin password which will be used for Chef Server.
+
+  rabbit_pass:
+    default: secrete
+    hidden: true
+    description: Password for RabbitMQ
+    type: String
+    constraints:
+    - length:
+        min: 1
+        max: 25
+      description: Password MUST be between 1 - 25 characters.
+    - allowed_pattern: "[a-zA-Z0-9]*"
+      description : Only Alpha-Numeric characters are allowed. This is the admin password used for RabbitMQ.
+
+  cleanup_on_failure:
+    description: Roll back server installation processes on Failure.
+    type: String
+    default: Keep My Installation I will play with it later
+    constraints:
+    - allowed_values:
+      - Keep My Installation I will play with it later
+      - Nuke it from orbit its the only way to be sure
+      description: If you are using the master branch you may want to keep the installation as failures are likely on the unstable branch.
+
+  cookbook_version:
+    description: Cookbooks used for the Rackspace Private Cloud Deployment.
+    type: String
+    default: v4.2.0
+    constraints:
+    - allowed_values:
+      - v4.2.0
+      - v4.1.2
+      - v4.1.1
+      - v4.1.0
+      - master
+      description: Version of the Rackspace Private Cloud you wish to deploy. Notice! Master may NOT be Stable.
+
+  run_list:
+    type: String
+    default: role[allinone],role[cinder-all]
+    description: Server Setup Run List
+
+  server_name:
+    type: String
+    default: RackspacePrivateCloudDemo
+    description: The Instance Name
+
+  install_script_url:
+    type: String
+    default: "https://raw.github.com/cloudnull/rcbops_allinone_inone/rax-stable/rcbops_allinone_inone.sh"
+    description: Location of the script for installing the Openstack Environment
+
+resources:
+
+  private_cloud_server:
+    type: OS::Nova::Server
+    properties:
+      flavor: { get_param: flavor }
+      image: { get_param: image }
+      name: { get_param: server_name }
+      user_data:
+        str_replace:
+          template: |
+            # Here are the script Override Values.
+
+            # Setup no roll back on failure
+            if [ "%cleanup_on_failure%" == "Keep My Installation I will play with it later" ];then
+              export DISABLE_ROLL_BACK=true
+            else
+              export DISABLE_ROLL_BACK=false
+            fi
+
+            # Setup a master dev environment
+            export COOKBOOK_VERSION="%cookbook_version%"
+
+            # Setup cidrs
+            export NOVA_INTERFACE="lo"
+            export MANAGEMENT_INTERFACE="eth0"
+
+            # Setup passwords
+
+            export CHEF_PW="%chef_admin_pass%"
+            export RMQ_PW="%rabbit_pass%"
+            export NOVA_PW="%os_admin_pass%"
+            export SYSTEM_PW="%system_pass%"
+
+            # Set an override for my roles
+            export RUN_LIST="%run_list%"
+
+            # Add Some default Images
+            export UBUNTU_IMAGE=True
+            export FEDORA_IMAGE=True
+            export CIRROS_IMAGE=True
+
+            # Begin the Install Process
+            # ============================================================================
+
+            # Make sure we have curl on the system
+            if [ "$(echo \"%image%\" grep -i ubuntu)" ];then
+              apt-get update && apt-get -y install curl
+            else
+              yum -y install curl
+            fi
+
+            # Get and run the installation script.
+            curl "%install_script_url%" | bash
+
+          params:
+            "%cookbook_version%": { get_param: cookbook_version }
+            "%chef_admin_pass%": { get_param: chef_admin_pass }
+            "%os_admin_pass%": { get_param: os_admin_pass }
+            "%rabbit_pass%": { get_param: rabbit_pass }
+            "%system_pass%": { get_param: system_pass }
+            "%run_list%": { get_param: run_list }
+            "%image%": { get_param: image }
+            "%cleanup_on_failure%": { get_param: cleanup_on_failure }
+            "%install_script_url%": { get_param: install_script_url }
+
+outputs:
+
+  public_ip:
+    value: { get_attr: [ private_cloud_server, PublicIp ] }
+    description: The public IP address of the newly configured Server.
