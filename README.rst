@@ -8,13 +8,13 @@ RCBOPS Stack in a BOX
 So you want to try Openstack?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Want to build a cloud? Want to try Openstack? Curious how the Openstack Cloud eco system all works? In the past you, the cloud operator, had to have a lot of tribal knowledge to simply stand Openstack up. In later releases Openstack became more robust and better documented but the process to build all of the components of Openstack into a working system was still arduous. Today the general community is vibrant with eager people who want to help spread the goodness of Openstack around and we have a miriad of methods for installing Openstack and consuming the fruits of the communal labor. 
+Want to build a cloud? Want to try Openstack? Curious how the Openstack Cloud ecosystem all works? In the past you, the cloud operator, had to have a lot of tribal knowledge to simply stand Openstack up. In later releases, Openstack became more robust and better documented, but the process to build all of the components of Openstack into a working system was still arduous. Today the general community is vibrant with eager people who want to help spread the goodness of Openstack around, and we have a myriad of methods for installing Openstack and consuming the fruits of the communal labor. 
 
 
 Cloud as an Instance!
 ^^^^^^^^^^^^^^^^^^^^^
 
-The Openstack cloud has grown to encompass some amazing projects. These projects allow for authentication, imaging, orchestration, monitoring, and many more. If you were curious how all this works together you have a few ready made options. First is Devstack, another is PackStack, and then there is this one. As you are reading you may think to yourself, what method is this one? The method for deployment I have eluded to is an "AIO" installation, which is simply a scripted "All In One" install. The deployment script builds Openstack and all of its core services into a single server and then allows you the user to play with the services. With the script, you can have a ready made Openstack testing node in about 7 minutes (1). The script is easy to understand and hack on but allows for a robust deployment of Openstack. The real mustard behind this single script is the Open Source Chef cookbooks produced by the Rackspace Private Cloud Development Team (2). The cookbooks serve as the basis for the deployment mechanism but the script allows all of the bits to come together and work seamlessly.
+The Openstack cloud has grown to encompass some amazing projects. These projects allow for authentication, imaging, orchestration, monitoring, and many more. If you were curious how all this works together, you'd have a few ready made options. One is Devstack, another is PackStack, and then there is this one. As you are reading you may think to yourself, what method is this one? The method for deployment I have alluded to is an "AIO" installation, which is simply a scripted "All In One" install. The deployment script builds Openstack and all of its core services into a single server and then allows you, the user, to play with the services. With the script, you can have a ready made Openstack testing node in about 7 minutes (1). The script is easy to understand and hack on but allows for a robust deployment of Openstack. The real mustard behind this single script is the Open Source Chef cookbooks project produced by the Rackspace Private Cloud Development Team (2). The cookbooks serve as the basis for the deployment mechanism, but the script allows all of the bits to come together and work seamlessly.
 
 
 Getting Cloudy
@@ -42,11 +42,11 @@ Now simply sit back and enjoy my hard work and watch cloud cook. In about 7 minu
 But Wait There's More!
 ^^^^^^^^^^^^^^^^^^^^^^
 
-In true nerd fashion I could not simply create a one size fits all deployment system which was not flexible enough to do interesting things with and I would never build an application which had a single purpose and could be out moded so easily. I go full retard on all my projects and this is no exception.  The script has a whole bunch of options which allow you, the cloud builder, the ability to specify and or consume different aspects of the cloud.  In my github repo found here::
+In true nerd fashion, I could not simply create a one size fits all deployment system which was not flexible enough to do interesting things with, and I would never build an application which had a single purpose and could be out moded so easily. I go full retard on all my projects, and this is no exception.  The script has a whole bunch of options which allow you, the cloud builder, the ability to specify and or consume different aspects of the cloud.  In my github repo found here::
 
   https://github.com/cloudnull/rcbops_allinone_inone
 
-I created several "RC" files which have been built as examples for configuring the "All In One In One" installer.  These "RC" files allow you to create an Openstack cloud installing neutron, heat, ceiolmeter or all of the above. They also allow you to take control of the installation such that you can specify the virtualization type, network interfaces, CIDRs, run lists, what images will be installed by default and more. In truth using this script allows you to build a fairly robust system out of the box.
+I created several "RC" files which have been built as examples for configuring the "All In One In One" installer.  These "RC" files allow you to create an Openstack cloud installing neutron, heat, ceiolmeter or all of the above. They also allow you to take control of the installation such that you can specify the virtualization type, network interfaces, CIDRs, run lists, what images will be installed by default and more. In truth, using this script allows you to build a fairly robust system out of the box.
 
 
 Configuration Options
