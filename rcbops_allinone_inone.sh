@@ -728,7 +728,7 @@ CHEF_PW=${CHEF_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
 RMQ_PW=${RMQ_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
 
 # Set Rabbit Address
-RMQ_ADDR=${RMQ_ADDR:-"127.0.0.1"}
+RMQ_ADDR=${RMQ_ADDR:-""}
 
 # Set Admin Pass
 NOVA_PW=${NOVA_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
@@ -805,8 +805,6 @@ erchef['s3_url_ttl'] = 3600
 nginx["ssl_port"] = 4000
 nginx["non_ssl_port"] = 4080
 nginx["enable_non_ssl"] = true
-rabbitmq["node_ip_address"] = "${RMQ_ADDR}"
-rabbitmq["vip"] = "${RMQ_ADDR}"
 rabbitmq["enable"] = false
 rabbitmq["password"] = "${RMQ_PW}"
 chef_server_webui['web_ui_admin_default_password'] = "${CHEF_PW}"
