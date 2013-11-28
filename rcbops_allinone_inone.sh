@@ -403,6 +403,7 @@ EOF
       echo "/opt/cinder.sh" | tee -a /etc/rc.local
     fi
 
+    chmod +x /opt/cinder.sh
     chmod +x /etc/rc.local
   fi
 
