@@ -723,7 +723,7 @@ CHEF_PW=${CHEF_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
 RMQ_PW=${RMQ_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
 
 # Set Rabbit Address
-RMQ_ADDR=${RMQ_ADDR:"127.0.0.1"}
+RMQ_ADDR=${RMQ_ADDR:-"127.0.0.1"}
 
 # Set Admin Pass
 NOVA_PW=${NOVA_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
