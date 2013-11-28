@@ -58,6 +58,9 @@ set -u
 # Set this to override the RabbitMQ Password, DEFAULT is "Random Things"
 # RMQ_PW=""
 
+# Set this to override the RabbitMQ Address, DEFAULT is "127.0.0.1"
+# RMQ_ADDR=""
+
 # Set this to override the Openstack Admin Pass, DEFAULT is "Random Things"
 # NOVA_PW=""
 
@@ -334,7 +337,7 @@ function install_yum_packages() {
   if [ "${IPTABLES_SAVE}" ];then
     ${IPTABLES_SAVE} > /etc/iptables.original
   fi
-  
+
   if [ "${IPTABLES}" ];then
     ${IPTABLES} -I INPUT -m tcp -p tcp --dport 443 -j ACCEPT
     ${IPTABLES} -I INPUT -m tcp -p tcp --dport 80 -j ACCEPT
@@ -542,11 +545,11 @@ function neutron_setup() {
 
   # Add notice to bash login
   echo -e '
-Remember! That this system is using Neutron. To gain access to an instance via 
-the command line you MUST execute commands within in the namespace. Example, 
+Remember! That this system is using Neutron. To gain access to an instance via
+the command line you MUST execute commands within in the namespace. Example,
 "ip netns exec NAME_SPACE_ID bash".
 
-This will give you shell access to the specific namespace routing table Execute 
+This will give you shell access to the specific namespace routing table Execute
 "ip netns" for a full list of all network namespsaces on this Server.
 ' | tee -a /etc/motd
 
@@ -718,6 +721,9 @@ CHEF_PW=${CHEF_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
 
 # Set Rabbit Pass
 RMQ_PW=${RMQ_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
+
+# Set Rabbit Address
+RMQ_ADDR=${RMQ_ADDR:"127.0.0.1"}
 
 # Set Admin Pass
 NOVA_PW=${NOVA_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
@@ -900,6 +906,7 @@ env = {'chef_type': 'environment',
     },
     'developer_mode': ${DEVELOPER_MODE:-False},
     'rabbitmq': {
+      'address': "${RMQ_ADDR}",
       'erlang_cookie': "${CHEF_COOKIE}"
     },
     'enable_monit': True,
