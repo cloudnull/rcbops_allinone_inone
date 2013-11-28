@@ -318,7 +318,7 @@ function install_apt_packages() {
   RABBITMQ="${RABBIT_URL}/v3.1.5/rabbitmq-server_3.1.5-1_all.deb"
   wget -O /tmp/rabbitmq.deb ${RABBITMQ}
   # Install Packages
-  apt-get update && apt-get install -y git curl lvm2 erlang
+  apt-get update && apt-get install -y git curl lvm2 erlang erlang-nox
   dpkg -i /tmp/rabbitmq.deb
 
   # Setup shared RabbitMQ
@@ -360,6 +360,7 @@ function install_yum_packages() {
   # Install RabbitMQ
   RABBITMQ_KEY="http://www.rabbitmq.com/rabbitmq-signing-key-public.asc"
   rpm --import ${RABBITMQ_KEY}
+
   RABBITMQ="${RABBIT_URL}/v3.1.5/rabbitmq-server-3.1.5-1.noarch.rpm"
   wget -O /tmp/rabbitmq.rpm ${RABBITMQ}
   rpm -Uvh /tmp/rabbitmq.rpm
