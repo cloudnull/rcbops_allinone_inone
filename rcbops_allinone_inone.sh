@@ -311,12 +311,15 @@ function service_stop() {
 # ==========================================================================
 function install_apt_packages() {
   # Install RabbitMQ Repo
-  RABBITMQ="http://www.rabbitmq.com/rabbitmq-signing-key-public.asc"
-  wget -O /tmp/rabbitmq.asc ${RABBITMQ}
+  RABBITMQ_KEY="http://www.rabbitmq.com/rabbitmq-signing-key-public.asc"
+  wget -O /tmp/rabbitmq.asc ${RABBITMQ_KEY}
   apt-key add /tmp/rabbitmq.asc
 
+  RABBITMQ="${RABBIT_URL}/v3.1.5/rabbitmq-server_3.1.5-1_all.deb"
+  wget -O /tmp/rabbitmq.deb ${RABBITMQ}
   # Install Packages
-  apt-get update && apt-get install -y git curl lvm2 rabbitmq-server
+  apt-get update && apt-get install -y git curl lvm2 erlang
+  dpkg -i /tmp/rabbitmq.deb
 
   # Setup shared RabbitMQ
   rabbit_setup
@@ -355,9 +358,10 @@ function install_yum_packages() {
   yum -y install erlang
 
   # Install RabbitMQ
-  RABBITMQ="http://www.rabbitmq.com/releases/rabbitmq-server/v3.1.5/rabbitmq-server-3.1.5-1.noarch.rpm"
+  RABBITMQ_KEY="http://www.rabbitmq.com/rabbitmq-signing-key-public.asc"
+  rpm --import ${RABBITMQ_KEY}
+  RABBITMQ="${RABBIT_URL}/v3.1.5/rabbitmq-server-3.1.5-1.noarch.rpm"
   wget -O /tmp/rabbitmq.rpm ${RABBITMQ}
-  rpm --import http://www.rabbitmq.com/rabbitmq-signing-key-public.asc
   rpm -Uvh /tmp/rabbitmq.rpm
   chkconfig rabbitmq-server on
   /sbin/service rabbitmq-server start
@@ -778,6 +782,8 @@ IPTABLES=${IPTABLES:-"$(which iptables)"}
 PASSWD=${PASSWD:-"$(which passwd)"}
 
 create_swap
+
+RABBIT_URL="http://www.rabbitmq.com/releases/rabbitmq-server"
 
 # Install Packages
 ${PACKAGE_INSTALL}
