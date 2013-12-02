@@ -391,9 +391,9 @@ function create_cinder() {
   # Set Cinder Device as Persistent
   cat > /opt/cinder.sh <<EOF
 #!/usr/bin/env bash
-LOOP=$(losetup -f)
+LOOP=\$(losetup -f)
 CINDER="/opt/cinder.img"
-losetup ${LOOP} ${CINDER}
+losetup \${LOOP} \${CINDER}
 EOF
 
   if [ -f "/opt/cinder.sh" ];then
