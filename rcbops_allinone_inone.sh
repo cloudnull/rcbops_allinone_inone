@@ -387,6 +387,7 @@ function create_cinder() {
   losetup ${LOOP} ${CINDER}
   pvcreate ${LOOP}
   vgcreate cinder-volumes ${LOOP}
+  pvscan
 
   # Set Cinder Device as Persistent
   cat > /opt/cinder.sh <<EOF
@@ -394,6 +395,7 @@ function create_cinder() {
 LOOP=\$(losetup -f)
 CINDER="/opt/cinder.img"
 losetup \${LOOP} \${CINDER}
+pvscan
 EOF
 
   if [ -f "/opt/cinder.sh" ];then
@@ -619,12 +621,10 @@ function success_exit() {
 
   # Notify the users and set new the MOTD
   echo -e "
-
 ** NOTICE **
 
 This is an Openstack Deployment based on the Rackspace Private Cloud Software.
 # ============================================================================
-
 Cookbook Branch/Version is     : ${COOKBOOK_VERSION}
 Your RabbitMQ Password is      : ${RMQ_PW}
 Your OpenStack Password is     : ${NOVA_PW}
@@ -632,12 +632,10 @@ Admin SSH key has been set as  : adminKey
 Cinder volumes are located     : ${CINDER}
 Openstack Cred File is located : /root/openrc
 Horizon URL is                 : https://${SYS_IP}:443
-
 Chef Server URL is             : ${CHEF_SERVER_URL}
 Chef Server Password is        : ${CHEF_PW}
 Your knife.rb is located       : /root/.chef/knife.rb
 All cookbooks are located      : /opt/allinoneinone
-
 # ============================================================================
 
 " | tee /etc/motd
