@@ -398,6 +398,10 @@ if [ ! "\$(losetup -a | grep \${CINDER})"  ];then
   CINDER="/opt/cinder.img"
   losetup \${LOOP} \${CINDER}
   pvscan
+  # Restart Cinder once the volumes are online
+  for srv in cinder-volume cinder-api cinder-scheduler;do
+    service \${srv} restart
+  done
 fi
 EOF
 
