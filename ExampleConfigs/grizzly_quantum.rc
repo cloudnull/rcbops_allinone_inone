@@ -5,7 +5,7 @@ export DISABLE_ROLL_BACK=true
 export COOKBOOK_VERSION="v4.1.2"
 
 # Setup cidrs
-export NOVA_INTERFACE="lo"
+export NOVA_INTERFACE="eth0"
 export MANAGEMENT_INTERFACE="eth0"
 
 # Setup passwords
