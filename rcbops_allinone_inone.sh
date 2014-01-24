@@ -85,8 +85,10 @@ set -u
 # Set this to override the Cinder Device, DEFAULT is "/opt/cinder.img"
 # CINDER=""
 
+# Set the VM Network Prefix
+# NETWORK_PREFIX="172.16.0"
+
 # Set this to set the Neutron Interface, Only Set if you want to use Neutron
-# ================== NOTE NEUTRON MAY NOT WORK RIGHT NOW ===================
 # Enale || Disable Neutron
 # NEUTRON_ENABLED=False
 
@@ -537,11 +539,11 @@ function neutron_setup() {
 
   # Make our subnets
   ${NEUTRON_NAME} subnet-create ${NEUTRON_NETWORK_NAME} \
-                                172.16.0.0/16 \
+                                ${NETWORK_PREFIX}.0/24 \
                                 --name ${NEUTRON_NETWORK_NAME}_subnet \
                                 --no-gateway \
-                                --host-route destination=0.0.0.0/0,nexthop=172.16.0.1 \
-                                --allocation-pool start=172.16.0.100,end=172.16.0.200 \
+                                --host-route destination=0.0.0.0/0,nexthop=${NETWORK_PREFIX}.1 \
+                                --allocation-pool start=${NETWORK_PREFIX}.100,end=${NETWORK_PREFIX}.200 \
                                 --dns-nameservers list=true 8.8.8.8 8.8.8.7
 
   # Configure OVS
@@ -713,10 +715,10 @@ if [ ! -f "/root/.ssh/id_rsa" ];then
 fi
 
 # Enable || Disable Developer Mode
-DEVELOPER_MODE=${DEVELOPER_MODE:-False}
+DEVELOPER_MODE=${DEVELOPER_MODE:-"False"}
 
 # Enable || Disable Package Upgrades
-DO_PACKAGE_UPGRADES=${DO_PACKAGE_UPGRADES:-True}
+DO_PACKAGE_UPGRADES=${DO_PACKAGE_UPGRADES:-"True"}
 
 # List of all Services
 OPENSTACK_SERVICES="cinder glance nova keystone ceilometer heat horizon "
@@ -743,16 +745,22 @@ NOVA_PW=${NOVA_PW:-$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 9)}
 SYSTEM_PW=${SYSTEM_PW:-${NOVA_PW}}
 
 # Set the Cookbook Version
-COOKBOOK_VERSION=${COOKBOOK_VERSION:-v4.1.2}
+COOKBOOK_VERSION=${COOKBOOK_VERSION:-"v4.1.2"}
+
+# Set The Virtualization Type
+VIRT_TYPE=${VIRT_TYPE:-"qemu"}
 
 # Set Cinder Data
 CINDER=${CINDER:-"/opt/cinder.img"}
 
+# Set the VM Network Prefix
+NETWORK_PREFIX=${NETWORK_PREFIX:-"172.16.0"}
+
 # Enable || Disable Neutron
-NEUTRON_ENABLED=${NEUTRON_ENABLED:-False}
+NEUTRON_ENABLED=${NEUTRON_ENABLED:-"False"}
 
 # Set the Interface
-NEUTRON_INTERFACE=${NEUTRON_INTERFACE:-eth1}
+NEUTRON_INTERFACE=${NEUTRON_INTERFACE:-"eth1"}
 
 # Set the Name of the Neutron Service
 NEUTRON_NAME=${NEUTRON_NAME:-"quantum"}
@@ -977,7 +985,7 @@ env = {'chef_type': 'environment',
         'use_single_default_gateway': False
       },
       'libvirt': {
-        'virt_type': "${VIRT_TYPE:-qemu}",
+        'virt_type': "${VIRT_TYPE}",
         'vncserver_listen': '0.0.0.0'
       },
       'network': {},
@@ -1029,7 +1037,7 @@ else:
           'bridge_dev': 'eth0',
           'dns1': '8.8.8.8',
           'dns2': '8.8.4.4',
-          'ipv4_cidr': '172.16.0.0/16',
+          'ipv4_cidr': "${NETWORK_PREFIX}.0/24",
           'label': 'public',
           'network_size': '255',
           'num_networks': '1'
