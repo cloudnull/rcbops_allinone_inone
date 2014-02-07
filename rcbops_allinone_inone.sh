@@ -89,7 +89,7 @@ set -u
 # NETWORK_PREFIX="172.16.0"
 
 # Set this to set the Neutron Interface, Only Set if you want to use Neutron
-# Enale || Disable Neutron
+# Enable || Disable Neutron
 # NEUTRON_ENABLED=False
 
 # Set the Interface for Neutron
@@ -97,6 +97,16 @@ set -u
 
 # Set the name of the Service
 # NEUTRON_NAME="neutron"
+
+# Enable Load Balancer as a Service
+# LBAAS_ENABLED=True || False
+
+# Enable VPN as a Service
+# VPNAAS_ENABLED=True || False
+
+# Enable Firewall as a Service
+# FWAAS_ENABLED=True || False
+
 # ==========================================================================
 
 # Chef Server Override for Package URL
@@ -768,6 +778,15 @@ NEUTRON_NAME=${NEUTRON_NAME:-"quantum"}
 # Set network name
 NEUTRON_NETWORK_NAME=${NEUTRON_NETWORK_NAME:-"aioionet"}
 
+# Enable || Disable LBaaS
+LBAAS_ENABLED=${LBAAS_ENABLED:-"False"}
+
+# Enable || Disable VPNaaS
+VPNAAS_ENABLED=${VPNAAS_ENABLED:-"False"}
+
+# Enable || Disable FWaaS
+FWAAS_ENABLED=${FWAAS_ENABLED:-"False"}
+
 # Set the default Run list
 RUN_LIST=${RUN_LIST:-"role[allinone],role[cinder-all]"}
 
@@ -913,7 +932,8 @@ if not "${PUBLIC_INTERFACE_CIDR}":
 else:
     public_network = "${PUBLIC_INTERFACE_CIDR}"
 
-env = {'chef_type': 'environment',
+env = {
+  'chef_type': 'environment',
   'cookbook_versions': {},
   'default_attributes': {},
   'description': 'OpenStack Test All-In-One Deployment in One Server',
@@ -1025,6 +1045,14 @@ if ${NEUTRON_ENABLED} is True:
         }
     }
     net_attrs['metadata_network'] = "True"
+    if ${LBAAS_ENABLED} is True:
+        net_attrs["${NEUTRON_NAME}"]['lbaas']['enabled'] = True
+
+    if ${FWAAS_ENABLED} is True:
+        net_attrs["${NEUTRON_NAME}"]['fwaas']['enabled'] = True
+
+    if ${VPNAAS_ENABLED} is True:
+        net_attrs["${NEUTRON_NAME}"]['vpnaas']['enabled'] = True
 else:
     env['override_attributes']['nova']['network'].update({
         'multi_host': True,
