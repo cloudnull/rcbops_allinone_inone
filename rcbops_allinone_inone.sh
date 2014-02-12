@@ -552,7 +552,6 @@ function neutron_setup() {
                                 ${NETWORK_PREFIX}.0/24 \
                                 --name ${NEUTRON_NETWORK_NAME}_subnet \
                                 --no-gateway \
-                                --host-route destination=0.0.0.0/0,nexthop=${NETWORK_PREFIX}.1 \
                                 --allocation-pool start=${NETWORK_PREFIX}.100,end=${NETWORK_PREFIX}.200 \
                                 --dns-nameservers list=true 8.8.8.8 8.8.8.7
 
@@ -1046,13 +1045,13 @@ if ${NEUTRON_ENABLED} is True:
     }
     net_attrs['metadata_network'] = "True"
     if ${LBAAS_ENABLED} is True:
-        net_attrs["${NEUTRON_NAME}"]['lbaas']['enabled'] = True
+        net_attrs['ovs']['lbaas']['enabled'] = True
 
     if ${FWAAS_ENABLED} is True:
-        net_attrs["${NEUTRON_NAME}"]['fwaas']['enabled'] = True
+        net_attrs['ovs']['fwaas']['enabled'] = True
 
     if ${VPNAAS_ENABLED} is True:
-        net_attrs["${NEUTRON_NAME}"]['vpnaas']['enabled'] = True
+        net_attrs['ovs']['vpnaas']['enabled'] = True
 else:
     env['override_attributes']['nova']['network'].update({
         'multi_host': True,
@@ -1061,8 +1060,8 @@ else:
 
     env['override_attributes']['nova']['networks'].update({
         'public': {
-          'bridge': 'br0',
-          'bridge_dev': 'eth0',
+          'bridge': "br-${NEUTRON_INTERFACE}",
+          'bridge_dev': "${NEUTRON_INTERFACE}",
           'dns1': '8.8.8.8',
           'dns2': '8.8.4.4',
           'ipv4_cidr': "${NETWORK_PREFIX}.0/24",
