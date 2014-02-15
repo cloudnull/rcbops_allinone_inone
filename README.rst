@@ -92,6 +92,9 @@ Set this to override the Cinder Device, DEFAULT is "/opt/cinder.img":
 Set this to set the Neutron Interface, Only Set if you want to use Neutron
   NEUTRON_ENABLED=True or False
 
+Enable or Disable the auto creation of neutron networks
+  NEUTRON_CREATE_NETWORKS=True || False
+
 Set the Interface for Neutron
   NEUTRON_INTERFACE=""
 

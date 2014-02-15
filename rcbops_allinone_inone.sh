@@ -92,6 +92,9 @@ set -u
 # Enable || Disable Neutron
 # NEUTRON_ENABLED=False
 
+# Enable or Disable the auto creation of neutron networks
+# NEUTRON_CREATE_NETWORKS=True || False
+
 # Set the Interface for Neutron
 # NEUTRON_INTERFACE=""
 
@@ -542,18 +545,19 @@ function neutron_setup() {
     fi
   fi
 
-  # Make our networks
-  ${NEUTRON_NAME} net-create --provider:physical_network=ph-${NEUTRON_INTERFACE} \
-                             --provider:network_type=flat \
-                             --shared ${NEUTRON_NETWORK_NAME}
-
-  # Make our subnets
-  ${NEUTRON_NAME} subnet-create ${NEUTRON_NETWORK_NAME} \
-                                ${NETWORK_PREFIX}.0/24 \
-                                --name ${NEUTRON_NETWORK_NAME}_subnet \
-                                --no-gateway \
-                                --allocation-pool start=${NETWORK_PREFIX}.100,end=${NETWORK_PREFIX}.200 \
-                                --dns-nameservers list=true 8.8.8.8 8.8.8.7
+  if ${NEUTRON_CREATE_NETWORKS} == "True";then
+    # Make our networks
+    ${NEUTRON_NAME} net-create --provider:physical_network=ph-${NEUTRON_INTERFACE} \
+                              --provider:network_type=flat \
+                              --shared ${NEUTRON_NETWORK_NAME}
+    # Make our subnets
+    ${NEUTRON_NAME} subnet-create ${NEUTRON_NETWORK_NAME} \
+                                  ${NETWORK_PREFIX}.0/24 \
+                                  --name ${NEUTRON_NETWORK_NAME}_subnet \
+                                  --no-gateway \
+                                  --allocation-pool start=${NETWORK_PREFIX}.100,end=${NETWORK_PREFIX}.200 \
+                                  --dns-nameservers list=true 8.8.8.8 8.8.8.7
+  fi
 
   # Configure OVS
   ovs-vsctl add-port br-${NEUTRON_INTERFACE} ${NEUTRON_INTERFACE}
@@ -773,6 +777,9 @@ NEUTRON_INTERFACE=${NEUTRON_INTERFACE:-"eth1"}
 
 # Set the Name of the Neutron Service
 NEUTRON_NAME=${NEUTRON_NAME:-"quantum"}
+
+# Enable || Disable Auto Create Networks
+NEUTRON_CREATE_NETWORKS=${NEUTRON_CREATE_NETWORKS:-"True"}
 
 # Set network name
 NEUTRON_NETWORK_NAME=${NEUTRON_NETWORK_NAME:-"aioionet"}
@@ -1045,17 +1052,20 @@ if ${NEUTRON_ENABLED} is True:
     }
     net_attrs['metadata_network'] = "True"
     if ${LBAAS_ENABLED} is True:
-        net_attrs['ovs']['lbaas']['enabled'] = True
+        lbaas = net_attrs['lbaas'] = {}
+        lbaas['enabled'] = True
 
     if ${FWAAS_ENABLED} is True:
-        net_attrs['ovs']['fwaas']['enabled'] = True
+        fwaas = net_attrs['fwaas'] = {}
+        fwaas['enabled'] = True
 
     if ${VPNAAS_ENABLED} is True:
-        net_attrs['ovs']['vpnaas']['enabled'] = True
+        vpnaas = net_attrs['vpnaas'] = {}
+        vpnaas['enabled'] = True
 else:
     env['override_attributes']['nova']['network'].update({
         'multi_host': True,
-        'public_interface': 'br0'
+        'public_interface': "br-${NEUTRON_INTERFACE}"
     })
 
     env['override_attributes']['nova']['networks'].update({
