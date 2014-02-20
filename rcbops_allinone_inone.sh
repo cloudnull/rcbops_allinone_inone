@@ -545,18 +545,18 @@ function neutron_setup() {
     fi
   fi
 
-  if ${NEUTRON_CREATE_NETWORKS} == "True";then
+  if [ "${NEUTRON_CREATE_NETWORKS}" == "True" ];then
     # Make our networks
     ${NEUTRON_NAME} net-create --provider:physical_network=ph-${NEUTRON_INTERFACE} \
-                              --provider:network_type=flat \
-                              --shared ${NEUTRON_NETWORK_NAME}
+                               --provider:network_type=flat \
+                               --shared ${NEUTRON_NETWORK_NAME}
     # Make our subnets
     ${NEUTRON_NAME} subnet-create ${NEUTRON_NETWORK_NAME} \
                                   ${NETWORK_PREFIX}.0/24 \
                                   --name ${NEUTRON_NETWORK_NAME}_subnet \
                                   --no-gateway \
                                   --allocation-pool start=${NETWORK_PREFIX}.100,end=${NETWORK_PREFIX}.200 \
-                                  --dns-nameservers list=true 8.8.8.8 8.8.8.7
+                                  --dns-nameservers list=true 8.8.4.4 8.8.8.8
   fi
 
   # Configure OVS
