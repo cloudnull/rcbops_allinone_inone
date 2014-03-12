@@ -1065,13 +1065,13 @@ if ${NEUTRON_ENABLED} is True:
 else:
     env['override_attributes']['nova']['network'].update({
         'multi_host': True,
-        'public_interface': "br-${NEUTRON_INTERFACE}"
+        'public_interface': "br-${PUBLIC_INTERFACE}"
     })
 
     env['override_attributes']['nova']['networks'].update({
         'public': {
-          'bridge': "br-${NEUTRON_INTERFACE}",
-          'bridge_dev': "${NEUTRON_INTERFACE}",
+          'bridge': "br-${PUBLIC_INTERFACE}",
+          'bridge_dev': "${PUBLIC_INTERFACE}",
           'dns1': '8.8.8.8',
           'dns2': '8.8.4.4',
           'ipv4_cidr': "${NETWORK_PREFIX}.0/24",
