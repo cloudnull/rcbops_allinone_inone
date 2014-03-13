@@ -722,10 +722,10 @@ fi
 # Make the system key used for bootstrapping self
 if [ ! -f "/root/.ssh/id_rsa" ];then
     ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
-    pushd /root/.ssh/
-    cat id_rsa.pub | tee -a authorized_keys
-    popd
 fi
+pushd /root/.ssh/
+cat id_rsa.pub | tee -a authorized_keys
+popd
 
 # Enable || Disable Developer Mode
 DEVELOPER_MODE=${DEVELOPER_MODE:-"False"}
