@@ -70,6 +70,9 @@ set -u
 # Set this to override the Cookbook version, DEFAULT is "v4.1.2"
 # COOKBOOK_VERSION=""
 
+# Set this to run flavor setup, (NOTICE LETTER CASE)
+# RUN_FLAVOR_SETUP=true || false
+
 # Set this to override the Management Interface, DEFAULT is "eth0"
 # MANAGEMENT_INTERFACE=""
 
@@ -589,6 +592,7 @@ This will give you shell access to the specific namespace routing table Execute
 # Remove Default Flavors and add a new default
 # ==========================================================================
 function flavor_setup() {
+
   # Delete all of the m1 flavors
   for FLAVOR in $(nova flavor-list | awk '/m1/ {print $2}');do
     nova flavor-delete ${FLAVOR}
@@ -803,6 +807,9 @@ CIRROS_IMAGE=${CIRROS_IMAGE:-False}
 
 # Testing Cookbooks
 TESTING_COOKBOOKS=${TESTING_COOKBOOKS:-""}
+
+# Run flavor_setup()
+RUN_FLAVOR_SETUP=${RUN_FLAVOR_SETUP:-true}
 
 # Bind Interfaces
 MANAGEMENT_INTERFACE=${MANAGEMENT_INTERFACE:-eth0}
@@ -1170,7 +1177,9 @@ if [ "${NEUTRON_ENABLED}" == "True" ];then
 fi
 
 # Setup a new flavor
-flavor_setup
+if ${RUN_FLAVOR_SETUP};then
+  flavor_setup
+fi
 
 # GREAT SUCCESS!
 success_exit
