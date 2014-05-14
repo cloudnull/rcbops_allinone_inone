@@ -70,6 +70,9 @@ set -u
 # Set this to override the Cookbook version, DEFAULT is "v4.1.2"
 # COOKBOOK_VERSION=""
 
+# Set this to run flavor setup, (NOTICE LETTER CASE)
+# RUN_FLAVOR_SETUP=true || false
+
 # Set this to override the Management Interface, DEFAULT is "eth0"
 # MANAGEMENT_INTERFACE=""
 
@@ -589,6 +592,7 @@ This will give you shell access to the specific namespace routing table Execute
 # Remove Default Flavors and add a new default
 # ==========================================================================
 function flavor_setup() {
+
   # Delete all of the m1 flavors
   for FLAVOR in $(nova flavor-list | awk '/m1/ {print $2}');do
     nova flavor-delete ${FLAVOR}
@@ -722,10 +726,10 @@ fi
 # Make the system key used for bootstrapping self
 if [ ! -f "/root/.ssh/id_rsa" ];then
     ssh-keygen -t rsa -f /root/.ssh/id_rsa -N ''
-    pushd /root/.ssh/
-    cat id_rsa.pub | tee -a authorized_keys
-    popd
 fi
+pushd /root/.ssh/
+cat id_rsa.pub | tee -a authorized_keys
+popd
 
 # Enable || Disable Developer Mode
 DEVELOPER_MODE=${DEVELOPER_MODE:-"False"}
@@ -803,6 +807,9 @@ CIRROS_IMAGE=${CIRROS_IMAGE:-False}
 
 # Testing Cookbooks
 TESTING_COOKBOOKS=${TESTING_COOKBOOKS:-""}
+
+# Run flavor_setup()
+RUN_FLAVOR_SETUP=${RUN_FLAVOR_SETUP:-true}
 
 # Bind Interfaces
 MANAGEMENT_INTERFACE=${MANAGEMENT_INTERFACE:-eth0}
@@ -1065,13 +1072,13 @@ if ${NEUTRON_ENABLED} is True:
 else:
     env['override_attributes']['nova']['network'].update({
         'multi_host': True,
-        'public_interface': "br-${NEUTRON_INTERFACE}"
+        'public_interface': "br-${PUBLIC_INTERFACE}"
     })
 
     env['override_attributes']['nova']['networks'].update({
         'public': {
-          'bridge': "br-${NEUTRON_INTERFACE}",
-          'bridge_dev': "${NEUTRON_INTERFACE}",
+          'bridge': "br-${PUBLIC_INTERFACE}",
+          'bridge_dev': "${PUBLIC_INTERFACE}",
           'dns1': '8.8.8.8',
           'dns2': '8.8.4.4',
           'ipv4_cidr': "${NETWORK_PREFIX}.0/24",
@@ -1170,7 +1177,9 @@ if [ "${NEUTRON_ENABLED}" == "True" ];then
 fi
 
 # Setup a new flavor
-flavor_setup
+if ${RUN_FLAVOR_SETUP};then
+  flavor_setup
+fi
 
 # GREAT SUCCESS!
 success_exit
